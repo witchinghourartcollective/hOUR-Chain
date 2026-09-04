@@ -50,7 +50,7 @@ Pre-alpha protocol definition. Phase 1 uses **Base** as the canonical EVM settle
 - Model one real release with contributors, rights, splits, and evidence.
 - Establish post-quantum signature profiles, key rotation, agent permissions, approvals, and settlement receipts.
 - Benchmark PQC transaction size, verification cost, mobile-wallet behavior, and infrastructure impact.
-- Create a cloud-cost baseline and funding application package.
+- Create a cloud-cost baseline and funding application package. See `docs/CLOUD-COST-BASELINE.md`.
 
 ## Safety and compliance
 

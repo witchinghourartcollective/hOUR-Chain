@@ -27,6 +27,8 @@ Reduce infrastructure burn immediately, finance a working creator-protocol pilot
 
 ## Cost controls
 
+See `CLOUD-COST-BASELINE.md` for the current monthly burn model, provider-level budget thresholds, and the non-production shutdown schedule.
+
 - Tag every resource by product, environment, owner, and cost center.
 - Budgets and alerts on every provider.
 - Non-production compute scheduled off-hours.
