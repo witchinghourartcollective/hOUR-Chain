@@ -81,13 +81,39 @@ One is confirmed. The rest are checks to run, not findings — no infrastructure
 audit has been performed, and nothing below should be reported as a discovered
 defect until it has been verified against a provider console.
 
-**Confirmed:**
+**Confirmed — the largest line item is priced on the wrong provider, not
+unnecessary:**
 
-- Two GCP blockchain full nodes account for roughly 55% of actual spend and
-  serve no current requirement. The Lightning plan runs pruned Bitcoin Core on
-  a ~US$24/month VPS, and hOUR Chain Phase 1 reads Base over RPC. Retiring
-  them is the single largest available reduction. Confirm whether they are
-  still running before assuming the $300 is recurring.
+The two GCP blockchain full nodes are roughly 55% of actual spend. They are
+roadmap requirements, not waste: an Ethereum node and most likely a Bitcoin
+node are both expected to be needed. The reduction available is in *where and
+when* they run, not in whether they exist.
+
+- **Managed cloud is the most expensive place to run a full node.** The cost of
+  a full node is dominated by sustained random-read IOPS against a large
+  dataset, and per-GB provisioned SSD on GCP, AWS or Azure is priced for
+  workloads that do not look like this. The same node on a dedicated or
+  bare-metal host with local NVMe typically costs a fraction of the managed
+  equivalent. Get quotes before assuming the current figure is the price of
+  running a node.
+- **Sequence them against need, not all at once.** Bitcoin for Lightning is
+  already covered by the pruned node in the migration plan (~US$24/month VPS,
+  `prune=20000`, `txindex=0`), which is sufficient for channel operation. An
+  archival Bitcoin node is a separate, later, much larger requirement.
+- **Check what the Ethereum node is actually for.** Phase 1 settles on Base,
+  which is an L2: an Ethereum L1 node does not by itself provide Base data. If
+  the goal is self-sovereign Base reads, the shape is a Base node (`op-node` /
+  `op-geth`) fed by an L1 execution and beacon endpoint — which an owned L1
+  node *can* serve, and that is a coherent reason to run one. If the goal is
+  only to read Base settlement receipts today, a hosted RPC endpoint does that
+  at a small fraction of the cost until self-hosting is warranted.
+- Confirm whether the nodes are currently running before treating the $300 as
+  recurring.
+
+Running own infrastructure rather than depending on third-party RPC is
+consistent with the protocol's verifiability goals and is defensible in a
+funding application. The argument to make is that it is deliberate, sequenced,
+and priced — not that it was avoided.
 
 **To verify:**
 
@@ -177,8 +203,11 @@ On that projection the team would budget roughly:
 
 ## Control actions before the next pilot wave
 
-1. Confirm whether the two GCP blockchain nodes are still running, and retire
-   them if so. Largest single reduction available.
+1. Price the two blockchain nodes on dedicated or bare-metal hosting and
+   compare against the current GCP figure. Largest single reduction available,
+   and it does not require giving up the nodes. Confirm first whether they are
+   currently running, and which of Ethereum L1, Base, and Bitcoin each one
+   actually serves.
 2. Reconcile the actual-spend table against provider billing exports and
    replace the owner-reported figures with measured ones.
 3. Complete the actual-spend table — it is known to be missing items.
