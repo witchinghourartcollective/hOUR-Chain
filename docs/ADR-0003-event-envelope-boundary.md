@@ -1,4 +1,4 @@
-# ADR-0002: Boundary between the hOUR Chain envelope and the platform envelope
+# ADR-0003: Boundary between the hOUR Chain envelope and the platform envelope
 
 Status: Proposed
 
@@ -121,6 +121,36 @@ Under this decision the two are not alternatives, and the split is:
 
 Deciding this before either is built avoids inventing Lightning events in a
 shape that cannot be promoted later.
+
+## Relation to ADR-0002 (post-quantum-native cryptography)
+
+ADR-0002 is Accepted and makes this boundary sharper, not softer. It requires
+post-quantum-capable authorization from genesis, versioned and replaceable
+signature suites, and downgrade resistance, and it forbids claiming end-to-end
+post-quantum security where any security-critical path relies solely on
+quantum-vulnerable public-key cryptography.
+
+The protocol envelope can satisfy that. `signature` is an object with an
+`algorithm` field, so a suite identifier such as ML-DSA travels inside the
+signed record and a verifier can reject a retired or downgraded suite.
+
+The platform envelope cannot satisfy it under any parameter choice. It has no
+signature field at all — authentication is an HMAC on the HTTP request, which
+protects the hop and not the record. There is nowhere to put an algorithm
+identifier, so a stored platform event carries no evidence of which suite
+authorised it, and a PQC migration cannot be verified or enforced over
+historical platform events.
+
+This removes the option of promoting the platform envelope to a protocol
+record by later bolting a signature onto it. Signing happens at the adapter,
+against the protocol envelope, under the ADR-0002 suite registry.
+
+One gap follows for the protocol envelope itself, and is not resolved here:
+`SPEC.md` Draft 0.2 requires "signature algorithm identifier, signature-suite
+version, and verification material", but `specs/event-envelope.schema.json`
+defines `signature` as `{algorithm, signer, value}` with
+`additionalProperties: false`. There is no suite-version field and no way to
+add one without a schema change. Tracked as follow-up, not changed by this ADR.
 
 ## Not decided here
 

@@ -40,7 +40,7 @@ Pre-alpha protocol definition. Phase 1 uses **Base** as the canonical EVM settle
 ## Decisions
 
 - [ADR-0001](docs/ADR-0001-phase-1-settlement.md) — Base as the Phase 1 settlement network.
-- [ADR-0002](docs/ADR-0002-event-envelope-boundary.md) — boundary between this
+- [ADR-0003](docs/ADR-0003-event-envelope-boundary.md) — boundary between this
   envelope and the `witching-hour-platform` envelope, and where Lightning
   telemetry versus Lightning settlement each belong.
 
