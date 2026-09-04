@@ -8,7 +8,7 @@ Measure the current infrastructure burn before scaling the protocol, reduce avoi
 
 ## Monthly cost baseline
 
-The current baseline is estimated at US$2,570/month before chain fees and one-off media processing. Figures below are intentionally conservative and designed for budgeting discipline rather than production forecasting.
+The current baseline is estimated at US$2,870/month before chain fees and one-off media processing. Figures below are intentionally conservative and designed for budgeting discipline rather than production forecasting.
 
 | Provider | Project | Environment | Owner | Monthly cost | Notes |
 | --- | --- | --- | --- | ---: | --- |
