@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hourchain.example/schemas/event-envelope.schema.json",
+  "title": "hOUR Chain Event Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "protocolVersion",
+    "schemaVersion",
+    "eventType",
+    "actor",
+    "subject",
+    "issuedAt",
+    "payloadHash",
+    "signature"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "minLength": 16
+    },
+    "protocolVersion": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "type": "string"
+    },
+    "eventType": {
+      "type": "string"
+    },
+    "actor": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "issuedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payloadHash": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "previousEventRefs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "network": {
+      "type": "string",
+      "enum": [
+        "base",
+        "lightning",
+        "solana",
+        "offchain"
+      ]
+    },
+    "nonce": {
+      "type": "string"
+    },
+    "signature": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "signer",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "signer": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
