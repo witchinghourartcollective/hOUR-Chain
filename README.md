@@ -35,6 +35,13 @@ Pre-alpha protocol definition. Phase 1 uses **Base** as the canonical EVM settle
 - `adapters/` — Phigit, Witching Hour App, Live App, agent, Lightning, and Solana.
 - `docs/` — trust, threats, architecture decisions, funding, compliance, and operations.
 
+## Decisions
+
+- [ADR-0001](docs/ADR-0001-phase-1-settlement.md) — Base as the Phase 1 settlement network.
+- [ADR-0002](docs/ADR-0002-event-envelope-boundary.md) — boundary between this
+  envelope and the `witching-hour-platform` envelope, and where Lightning
+  telemetry versus Lightning settlement each belong.
+
 ## Phase 0
 
 - Define actors, trust boundaries, identifiers, and the canonical event envelope.
