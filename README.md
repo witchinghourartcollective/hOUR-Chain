@@ -40,7 +40,7 @@ Pre-alpha protocol definition. Phase 1 uses **Base** as the canonical EVM settle
 - Define actors, trust boundaries, identifiers, and the canonical event envelope.
 - Model one real release with contributors, rights, splits, and evidence.
 - Establish key rotation, agent permissions, approvals, and settlement receipts.
-- Create a cloud-cost baseline and funding application package.
+- Create a cloud-cost baseline and funding application package. See `docs/CLOUD-COST-BASELINE.md`.
 
 ## Safety and compliance
 
