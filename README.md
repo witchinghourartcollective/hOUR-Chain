@@ -6,6 +6,8 @@ hOUR Chain is the creator rights, provenance, access, and settlement protocol fo
 
 Pre-alpha protocol definition. Phase 1 uses **Base** as the canonical EVM settlement network, with Bitcoin Lightning and Solana implemented as adapters. hOUR Chain is not yet an independent L1, validator network, or mainnet.
 
+**Security direction:** hOUR Chain is post-quantum-native by design. Post-quantum authorization, algorithm agility, and protocol-level key rotation are genesis requirements, including for users, validators, governance, treasury, recovery, bridges, proofs, and upgrades. See [ADR-0002](docs/ADR-0002-post-quantum-native-cryptography.md).
+
 ## Existing ecosystem
 
 - **Phigit OS:** local-first evidence, identity, verification, chain reads, and auditable reporting.
@@ -39,7 +41,8 @@ Pre-alpha protocol definition. Phase 1 uses **Base** as the canonical EVM settle
 
 - Define actors, trust boundaries, identifiers, and the canonical event envelope.
 - Model one real release with contributors, rights, splits, and evidence.
-- Establish key rotation, agent permissions, approvals, and settlement receipts.
+- Establish post-quantum signature profiles, key rotation, agent permissions, approvals, and settlement receipts.
+- Benchmark PQC transaction size, verification cost, mobile-wallet behavior, and infrastructure impact.
 - Create a cloud-cost baseline and funding application package. See `docs/CLOUD-COST-BASELINE.md`.
 
 ## Safety and compliance
