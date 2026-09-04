@@ -18,7 +18,7 @@ Do not use the superseded US$2,870/month scenario, US$143.50 per-creator figure,
 | Claude | AI tooling | ~$20 | Confirm subscription invoice |
 | Gemini | AI tooling | ~$10 | Confirm subscription invoice |
 | Cloudflare | DNS/edge services | ~$5 | Confirm invoice |
-| Unallocated estimate | Cost remembered in updated total but not yet attributed | ~$60 | Identify through invoices and provider billing exports |
+| GitHub | Enterprise, Business, and Copilot | ~$60+ | Owner-attributed, stated as a floor; confirm seat counts and plan tier from invoice |
 | **Approximate total** |  | **~$545+** | Floor pending reconciliation |
 
 The estimate excludes any unremembered usage, taxes, chain fees, one-off media processing, and future pilot infrastructure.
