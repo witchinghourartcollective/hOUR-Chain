@@ -15,10 +15,10 @@ Do not use the superseded US$2,870/month scenario, US$143.50 per-creator figure,
 | GCP | Two running blockchain full nodes: Bitcoin and Ethereum | ~$300 | Recurring owner estimate; confirm project, instance, disk, egress, and per-node split from billing export |
 | Azure | Existing workloads | ~$100+ | Recurring owner estimate; export invoice and resource-level cost detail |
 | ChatGPT Business | Two seats | ~$50 | Confirm subscription invoice |
-| GitHub | Enterprise, Business, and Copilot | ~$60+ | Owner estimate, stated as a floor; confirm seat counts and plan tier from invoice |
 | Claude | AI tooling | ~$20 | Confirm subscription invoice |
 | Gemini | AI tooling | ~$10 | Confirm subscription invoice |
 | Cloudflare | DNS/edge services | ~$5 | Confirm invoice |
+| Unallocated estimate | Cost remembered in updated total but not yet attributed | ~$60 | Identify through invoices and provider billing exports |
 | **Approximate total** |  | **~$545+** | Floor pending reconciliation |
 
 The estimate excludes any unremembered usage, taxes, chain fees, one-off media processing, and future pilot infrastructure.
