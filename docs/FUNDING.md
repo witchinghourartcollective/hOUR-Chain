@@ -27,7 +27,13 @@ Reduce infrastructure burn immediately, finance a working creator-protocol pilot
 
 ## Cost controls
 
-See `CLOUD-COST-BASELINE.md` for the current monthly burn model, provider-level budget thresholds, and the non-production shutdown schedule.
+See `CLOUD-COST-BASELINE.md` for actual spend, the pilot-scale projection,
+provider-level budget thresholds, and the non-production shutdown schedule. It
+separates the two figures deliberately: actual spend is roughly US$545/month,
+self-funded and not yet reconciled to billing exports; the ~US$2,870/month
+figure is a forward projection for a 20-creator pilot and is not currently
+spent. Applications must quote each as what it is. There is no AWS spend
+today.
 
 - Tag every resource by product, environment, owner, and cost center.
 - Budgets and alerts on every provider.
