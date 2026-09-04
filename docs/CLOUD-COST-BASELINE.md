@@ -4,7 +4,7 @@ Status: owner-reported Phase 0 baseline for hOUR Chain pilot readiness. Provider
 
 ## Decision summary
 
-The current operating-cost floor is approximately **US$485/month**, self-funded by a solo founder. This is an estimate from memory, not a billing-derived total. It describes current spend constrained by available personal cash, not the infrastructure required for a scaled pilot.
+The current operating-cost floor is approximately **US$545/month**, self-funded by a solo founder. This is an estimate from memory, not a billing-derived total. It describes current spend constrained by available personal cash, not the infrastructure required for a scaled pilot.
 
 Do not use the superseded US$2,870/month scenario, US$143.50 per-creator figure, or claims about AWS/Postgres/Redis duplication. Those figures and findings were not based on deployed infrastructure or billing data. There is currently **no AWS spend**.
 
@@ -15,10 +15,11 @@ Do not use the superseded US$2,870/month scenario, US$143.50 per-creator figure,
 | GCP | Two running blockchain full nodes: Bitcoin and Ethereum | ~$300 | Recurring owner estimate; confirm project, instance, disk, egress, and per-node split from billing export |
 | Azure | Existing workloads | ~$100+ | Recurring owner estimate; export invoice and resource-level cost detail |
 | ChatGPT Business | Two seats | ~$50 | Confirm subscription invoice |
+| GitHub | Enterprise, Business, and Copilot | ~$60+ | Owner estimate, stated as a floor; confirm seat counts and plan tier from invoice |
 | Claude | AI tooling | ~$20 | Confirm subscription invoice |
 | Gemini | AI tooling | ~$10 | Confirm subscription invoice |
 | Cloudflare | DNS/edge services | ~$5 | Confirm invoice |
-| **Approximate total** |  | **~$485+** | Floor pending reconciliation |
+| **Approximate total** |  | **~$545+** | Floor pending reconciliation |
 
 The estimate excludes any unremembered usage, taxes, chain fees, one-off media processing, and future pilot infrastructure.
 
@@ -26,7 +27,7 @@ The estimate excludes any unremembered usage, taxes, chain fees, one-off media p
 
 A separately evaluated Lightning host is approximately **US$24/month** for a VPS with 2 vCPU, 4 GB RAM, and about 80 GB disk, running pruned Bitcoin Core (`prune=20000`, `txindex=0`) plus LND. A permanent Azure VM estimated near US$70/month was rejected on cost.
 
-This reference is not included in the US$485 total unless the VPS is actually provisioned and billed.
+This reference is not included in the US$545 total unless the VPS is actually provisioned and billed.
 
 ## Node decision: retain, resize, or retire
 
@@ -61,7 +62,7 @@ Funding should buy execution capacity and validated pilot infrastructure, not co
 
 Current position:
 
-- Solo founder, self-funded at approximately US$485+/month.
+- Solo founder, self-funded at approximately US$545+/month.
 - Scope is limited by personal cash flow, not lack of a protocol plan.
 - Cloud credits directly extend runway and convert into engineering, testing, security, and pilot delivery.
 - AWS credits are prospective capacity; they must not be described as reimbursement for existing AWS spend.
@@ -70,7 +71,7 @@ Current position:
 
 | Funding case | Evidence available now | What must be measured next | Decision |
 | --- | --- | --- | --- |
-| Keep current operations online | Owner-reported ~$485+/month floor | Billing exports and essential-resource map | Fund only verified essential resources |
+| Keep current operations online | Owner-reported ~$545+/month floor | Billing exports and essential-resource map | Fund only verified essential resources |
 | Replace/resize GCP nodes | Two nodes represent most remembered spend | Per-node cost, utilization, workload dependencies, managed-RPC comparison | First optimization experiment |
 | Run Lightning continuously | ~$24/month verified VPS sizing | Migration/recovery checklist and 30-day stability | Fund after safe migration plan |
 | Creator pilot | Product/protocol plan exists | Number of active creators, registered works, settlement events, support time, chain/RPC cost | Do not publish per-creator economics until measured |
