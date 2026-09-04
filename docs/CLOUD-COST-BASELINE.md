@@ -1,229 +1,127 @@
 # Cloud Cost Baseline and Controls
 
-Status: Phase 0 baseline for hOUR Chain pilot readiness.
+Status: owner-reported Phase 0 baseline for hOUR Chain pilot readiness. Provider billing exports have not yet been reconciled.
 
-## Objective
+## Decision summary
 
-Record what the project actually spends today, project what it would spend at
-pilot scale, reduce avoidable spend, and set operating guardrails before
-creator pilots and live settlement events.
+The current operating-cost floor is approximately **US$485/month**, self-funded by a solo founder. This is an estimate from memory, not a billing-derived total. It describes current spend constrained by available personal cash, not the infrastructure required for a scaled pilot.
 
-Two different numbers appear in this document and must not be conflated:
+Do not use the superseded US$2,870/month scenario, US$143.50 per-creator figure, or claims about AWS/Postgres/Redis duplication. Those figures and findings were not based on deployed infrastructure or billing data. There is currently **no AWS spend**.
 
-| | Figure | What it is |
-|---|---:|---|
-| **Actual** | ~US$545/month | Owner-reported current spend, self-funded. Incomplete — a floor, not a total. |
-| **Projected** | ~US$2,870/month | A forward model of a 20-creator pilot with deployed infrastructure. Not currently spent. |
+## Owner-reported current monthly cost floor
 
-Any external use of this document — funding applications included — must
-quote the actual figure as actual and the projected figure as projected.
-
-## Actual monthly spend
-
-Owner-reported from memory, not yet reconciled against provider billing
-exports. Treated as a floor: the list is known to be incomplete.
-
-| Provider | What it covers | Monthly | Confidence |
+| Provider or tool | Current use | Estimated monthly cost | Confidence / next evidence |
 | --- | --- | ---: | --- |
-| GCP | Two blockchain full nodes (ETH, BTC) | $300 | Amount reported; **recurring vs one-off unconfirmed** |
-| Azure | Compute and account baseline | $100 | "at least"; floor |
-| OpenAI | ChatGPT Business, 2 seats at $25 | $50 | Firm |
-| GitHub | Enterprise, Business, and Copilot | $60 | "at least"; floor |
-| Anthropic | Claude | $20 | Firm |
-| Google | Gemini | $10 | Firm |
-| Cloudflare | DNS, edge routing | $5 | Firm |
-| **Total** | | **$545** | **Floor — further items expected** |
+| GCP | Two running blockchain full nodes: Bitcoin and Ethereum | ~$300 | Recurring owner estimate; confirm project, instance, disk, egress, and per-node split from billing export |
+| Azure | Existing workloads | ~$100+ | Recurring owner estimate; export invoice and resource-level cost detail |
+| ChatGPT Business | Two seats | ~$50 | Confirm subscription invoice |
+| Claude | AI tooling | ~$20 | Confirm subscription invoice |
+| Gemini | AI tooling | ~$10 | Confirm subscription invoice |
+| Cloudflare | DNS/edge services | ~$5 | Confirm invoice |
+| **Approximate total** |  | **~$485+** | Floor pending reconciliation |
 
-Notes on this table:
+The estimate excludes any unremembered usage, taxes, chain fees, one-off media processing, and future pilot infrastructure.
 
-- **There is no AWS spend.** Every AWS figure in the projection below is
-  forward-looking only. This matters because AWS Activate is one of the
-  credits programmes being applied to.
-- AI subscriptions are counted as infrastructure, not overhead. The protocol
-  is being specified and built by a solo founder using these tools as the
-  engineering capacity, so they are a direct input to delivery.
-- Spend is currently constrained by available personal funds rather than by
-  technical need or lack of plan.
-- The Lightning node target (~US$24/month VPS: 2 vCPU, 4 GB RAM, ~80 GB disk,
-  pruned Bitcoin Core with `prune=20000` and `txindex=0`, plus LND) is a
-  planned cost. The migration has not yet run, so it is not in the table
-  above. A permanent Azure VM was evaluated at ~US$70/month for the same role
-  and rejected on cost.
+## Verified Lightning sizing reference
 
-## Projected monthly cost at pilot scale
+A separately evaluated Lightning host is approximately **US$24/month** for a VPS with 2 vCPU, 4 GB RAM, and about 80 GB disk, running pruned Bitcoin Core (`prune=20000`, `txindex=0`) plus LND. A permanent Azure VM estimated near US$70/month was rejected on cost.
 
-This models a 20-creator pilot with the indexer, API, explorer and media
-pipeline actually deployed. **None of it is current spend.** The repository is
-at specification stage: `README.md`, `SPEC.md`, `THREAT-MODEL.md`,
-`TRUST-MODEL.md`, three ADRs and a JSON event-envelope schema. `indexer/` and
-`apps/explorer/` are planned directories that do not yet exist.
+This reference is not included in the US$485 total unless the VPS is actually provisioned and billed.
 
-| Provider | Project | Environment | Owner | Monthly cost | Notes |
-| --- | --- | --- | --- | ---: | --- |
-| AWS | hOUR Chain indexer and API | production | Platform engineering | $1,360 | ECS/EKS baseline, Postgres, Redis, object storage, monitoring |
-| AWS | hOUR Chain staging and previews | non-production | Platform engineering | $420 | Dev/test resources, queued workloads, preview databases |
-| GCP | AI + media processing | production | Product + creative ops | $410 | Inference, embeddings, image/video processing, logs |
-| GCP | AI + media processing | non-production | Product + creative ops | $180 | Lower-tier test jobs and experimentation |
-| Vercel | Witching Hour App and explorer | production + preview | Product | $140 | Shared frontend hosting and preview environments |
-| GitHub Actions / Container Registry | CI and build runs | shared | Platform engineering | $55 | Runner minutes, caches, container images |
-| Cloudflare / DNS / WAF | platform routing | production | Platform engineering | $25 | Edge routing and abuse protection |
-| Base RPC / indexer | chain reads and receipts | production | Protocol engineering | $120 | RPC access and event ingestion for settlement workflows |
-| Storage and backup | evidence archive and snapshots | production | Trust & ops | $160 | Encrypted backups and retention snapshots |
-| Total | | | | $2,870 | Projected pilot-scale burn |
+## Node decision: retain, resize, or retire
 
-These are order-of-magnitude planning figures produced without billing data
-for services not yet deployed. They should be replaced with vendor quotes or
-measured usage before they inform any commitment.
+The immediate goal is not to assume that both GCP nodes are unnecessary. It is to prove which workloads require self-hosted nodes and at what service level.
 
-## Known reduction opportunities
-
-One is confirmed. The rest are checks to run, not findings — no infrastructure
-audit has been performed, and nothing below should be reported as a discovered
-defect until it has been verified against a provider console.
-
-**Confirmed — the largest line item is priced on the wrong provider, not
-unnecessary:**
-
-The two GCP blockchain full nodes are roughly 55% of actual spend. They are
-roadmap requirements, not waste: an Ethereum node and most likely a Bitcoin
-node are both expected to be needed. The reduction available is in *where and
-when* they run, not in whether they exist.
-
-- **Managed cloud is the most expensive place to run a full node.** The cost of
-  a full node is dominated by sustained random-read IOPS against a large
-  dataset, and per-GB provisioned SSD on GCP, AWS or Azure is priced for
-  workloads that do not look like this. The same node on a dedicated or
-  bare-metal host with local NVMe typically costs a fraction of the managed
-  equivalent. Get quotes before assuming the current figure is the price of
-  running a node.
-- **Sequence them against need, not all at once.** Bitcoin for Lightning is
-  already covered by the pruned node in the migration plan (~US$24/month VPS,
-  `prune=20000`, `txindex=0`), which is sufficient for channel operation. An
-  archival Bitcoin node is a separate, later, much larger requirement.
-- **Check what the Ethereum node is actually for.** Phase 1 settles on Base,
-  which is an L2: an Ethereum L1 node does not by itself provide Base data. If
-  the goal is self-sovereign Base reads, the shape is a Base node (`op-node` /
-  `op-geth`) fed by an L1 execution and beacon endpoint — which an owned L1
-  node *can* serve, and that is a coherent reason to run one. If the goal is
-  only to read Base settlement receipts today, a hosted RPC endpoint does that
-  at a small fraction of the cost until self-hosting is warranted.
-- Confirm whether the nodes are currently running before treating the $300 as
-  recurring.
-
-Running own infrastructure rather than depending on third-party RPC is
-consistent with the protocol's verifiability goals and is defensible in a
-funding application. The argument to make is that it is deliberate, sequenced,
-and priced — not that it was avoided.
-
-**To verify:**
-
-- Whether duplicate database or cache stacks exist across environments.
-- Whether preview environments and notebooks stay online after merge.
-- Whether AI and media jobs run outside approved hours.
-- Whether object storage and backup retention exceed pilot requirements.
-- Whether any test wallets or result caches lack an owner or expiry.
-
-## Budget and alert configuration
-
-Thresholds are set against actual spend where it exists, and against the
-projection where the service is not yet in use.
-
-| Provider | Budget | Basis | Alert thresholds | Owner | Action |
-| --- | --- | --- | --- | --- | --- |
-| GCP | US$350/month | Actual | 60%, 80%, 95% | Founder | Review node necessity before 80% |
-| Azure | US$150/month | Actual | 75%, 90%, 100% | Founder | Block new compute at 90% |
-| GitHub | US$100/month | Actual | 80%, 100% | Founder | Constrain runner concurrency and cache retention |
-| AI subscriptions | US$100/month | Actual | 90%, 100% | Founder | Review seat count before renewal |
-| Cloudflare | US$25/month | Actual | 90%, 100% | Founder | Review plan tier |
-| AWS | US$0/month | Not in use | any spend | Founder | Any AWS charge is unexpected; investigate before it recurs |
-| Base RPC / providers | US$250/month | Projected | 80%, 100% | Protocol engineering | Daily spend guardrail on read calls and settlement simulations |
-| Vercel | US$300/month | Projected | 75%, 90% | Product | Pause preview deployments over threshold |
-
-Operational controls:
-
-- Tag every cloud resource with `project`, `environment`, `owner`,
-  `cost_center`, and `service`.
-- Enforce automatic budget alerts via provider-native billing notifications.
-- Require an owner for every non-production resource and a default expiry date
-  within 14 days unless renewed.
-- Keep production-only resources isolated to the `prod` tag and prevent them
-  from being created in `dev` or `staging` without a justification.
-- Review monthly spend by provider, project, environment, and owner in the
-  same session used to review pilot KPIs.
-- Treat any single-day spend greater than 1.5x the trailing 30-day average as
-  a review item.
-
-## Proposed non-production shutdown schedule
-
-This applies to environments as they come into existence. Most do not exist
-yet, so today this is a standing policy rather than an active saving.
-
-| Environment | Schedule | Default action |
+| Workload | Self-hosted node may be justified when | Lower-cost alternative to test |
 | --- | --- | --- |
-| Dev and preview apps | 7:00 PM–8:00 AM local, Monday–Friday | Scale to zero or stop ephemeral compute |
-| Staging API and indexer | 7:00 PM–8:00 AM local, weekdays and all weekends | Auto-stop unless a deployment is in progress |
-| AI/media test jobs | Daily 7:00 PM–8:00 AM and weekends | Queue-only mode; no low-priority inference jobs |
-| Shared notebooks and experiments | 6:00 PM–9:00 AM, all days | Idle shutdown unless explicitly approved |
-| Production | Always on, only with a named owner and a dedicated budget | No automated shutdown without change control |
+| Ethereum / EVM settlement | Trust-minimized verification, archival/history requirements, predictable high RPC volume, privacy, or provider independence is required | Metered managed RPC with spending caps, then compare reliability and total cost |
+| Bitcoin / Lightning | A live Lightning node requires a dependable Bitcoin backend, or sovereign validation is a product requirement | Move Lightning to the verified pruned Bitcoin Core + LND VPS profile; do not retire until wallet, channel, backup, and sync migration is verified |
 
-Applied to a deployed pilot footprint, this model is expected to reduce
-non-production spend by roughly 35–45% without affecting release
-verification.
+Decision rule: do not permanently retire either node until its consumers, data dependencies, credentials, backups, and recovery path are inventoried. The first cost-reduction target is to eliminate or resize **unneeded GCP node capacity**, not to remove required chain validation blindly.
 
-## Cost per pilot creator
+## Immediate cost cuts versus funding needs
 
-Assumptions:
+### Immediate cost-control work
 
-- 20 active pilot creators in the first cohort.
-- One small production environment and one active staging environment.
-- 4–6 settlement or rights-approval events per creator per month.
+These actions should happen regardless of funding:
 
-Against **actual** spend today, with no pilot cohort running:
+1. Export the last 90 days of GCP and Azure billing at resource/SKU level.
+2. Map every billed resource to `project`, `environment`, `owner`, `cost_center`, and `service`.
+3. Determine the per-node GCP cost split and utilization: CPU, memory, disk type/size, snapshots, network egress, and uptime.
+4. Inventory every application that reads from the Bitcoin and Ethereum nodes.
+5. Compare the Ethereum node against a capped managed-RPC pilot.
+6. Plan any Bitcoin/Lightning migration before shutdown; verify channels, seed/static channel backup, wallet state, and chain sync.
+7. Schedule shutdown or scale-to-zero only for verified non-production resources.
+8. Activate provider budget alerts at 75%, 90%, and 100%.
+9. Review AI subscriptions monthly by shipped-work value; avoid cutting tools that replace materially more expensive labor without evidence.
 
-- Monthly actual: US$545
-- Per creator: not meaningful — there is no cohort yet.
+### Funding need
 
-Against the **projected** pilot-scale figure:
+Funding should buy execution capacity and validated pilot infrastructure, not cover unidentified waste.
 
-- Monthly projected: US$2,870
-- Per active pilot creator: US$143.50/month
-- Average settlement or rights-approval run: US$0.80–$2.50 each once shared
-  infrastructure is amortised across the cohort
-- Estimated total per pilot creator: roughly US$150/month inclusive of
-  platform overhead, with chain gas and network fees as separate operating
-  costs
+Current position:
 
-On that projection the team would budget roughly:
+- Solo founder, self-funded at approximately US$485+/month.
+- Scope is limited by personal cash flow, not lack of a protocol plan.
+- Cloud credits directly extend runway and convert into engineering, testing, security, and pilot delivery.
+- AWS credits are prospective capacity; they must not be described as reimbursement for existing AWS spend.
 
-- US$3,000–$4,000/month for a 20-creator pilot cohort
-- US$150–$250 per creator for hosting, indexing, AI support, and audit
-  workflows
-- US$10–$30 per creator in chain/network events depending on settlement mode
-  and network activity
+## Pressure-tested funding cases
 
-## Control actions before the next pilot wave
+| Funding case | Evidence available now | What must be measured next | Decision |
+| --- | --- | --- | --- |
+| Keep current operations online | Owner-reported ~$485+/month floor | Billing exports and essential-resource map | Fund only verified essential resources |
+| Replace/resize GCP nodes | Two nodes represent most remembered spend | Per-node cost, utilization, workload dependencies, managed-RPC comparison | First optimization experiment |
+| Run Lightning continuously | ~$24/month verified VPS sizing | Migration/recovery checklist and 30-day stability | Fund after safe migration plan |
+| Creator pilot | Product/protocol plan exists | Number of active creators, registered works, settlement events, support time, chain/RPC cost | Do not publish per-creator economics until measured |
+| Scale infrastructure | No billing-derived forecast yet | 30 stable days, unit costs, alerts, utilization, incident record | No scale-up yet |
 
-1. Price the two blockchain nodes on dedicated or bare-metal hosting and
-   compare against the current GCP figure. Largest single reduction available,
-   and it does not require giving up the nodes. Confirm first whether they are
-   currently running, and which of Ethereum L1, Base, and Bitcoin each one
-   actually serves.
-2. Reconcile the actual-spend table against provider billing exports and
-   replace the owner-reported figures with measured ones.
-3. Complete the actual-spend table — it is known to be missing items.
-4. Freeze new non-production resources until each has an owner, expiry date,
-   and budget tag.
-5. Set cost alerts on every provider in use and review them weekly.
-6. Re-estimate the pilot burn after 30 days of real pilot activity, and before
-   opening the next cohort.
+## Budget controls
 
-## Decision gate
+- Tag resources by project, environment, owner, cost center, and service.
+- Set provider-native budget alerts at 75%, 90%, and 100% of an approved provider budget.
+- Require a named owner and expiry date for each non-production resource.
+- Schedule non-production shutdown outside working hours only after verifying it is safe.
+- Review resource-level spend weekly until the baseline is reconciled, then monthly.
+- Investigate single-day spend above 1.5x the trailing 30-day average.
+- Keep production resources isolated and require an explicit justification for new recurring spend.
 
-A meaningful scale-up should only proceed when:
+Provider budgets must be set from reconciled billing and an approved runway—not from the superseded scenario.
 
-- monthly cost is within the approved budget;
-- the actual-spend table is reconciled to billing exports rather than memory;
-- all providers in use have active alerts;
-- duplicate and idle resources are retired or scheduled off;
-- the cost-per-creator model is stable across 30 days of pilot activity; and
-- settlement cost is below the expected creator value for the cohort.
+## Pilot economics gate
+
+No cost-per-creator figure is defensible yet. Establish it from actual pilot measurements:
+
+`cost per active creator = (pilot-attributable shared infrastructure + variable chain/RPC/storage/AI costs) / monthly active pilot creators`
+
+Track separately:
+
+- current shared operating floor;
+- incremental pilot infrastructure;
+- chain/RPC and settlement costs;
+- storage/evidence costs;
+- AI/media processing;
+- founder and support time;
+- one-time migration or security work.
+
+## Decision gate: what to fund next
+
+Fund the next increment only when:
+
+- billing exports reconcile the current monthly baseline;
+- essential and optional resources are separated;
+- alerts are active;
+- the GCP node retain/resize/replace test has a documented result;
+- any Bitcoin/Lightning move has a verified recovery plan;
+- the proposed spend maps to a 30-day deliverable;
+- pilot unit costs are measured rather than inferred; and
+- expected creator/protocol value exceeds the incremental cost.
+
+Until then, the defensible order is:
+
+1. preserve essential operations and backups;
+2. reconcile billing and reduce verified waste;
+3. secure cloud credits;
+4. fund the smallest working protocol pilot;
+5. measure 30 days of unit economics;
+6. scale only from evidence.
