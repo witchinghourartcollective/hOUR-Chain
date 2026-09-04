@@ -6,7 +6,7 @@ Reduce verified infrastructure waste immediately, preserve essential services, f
 
 ## Current funding position
 
-hOUR Chain is being specified and built by a solo founder, self-funded out of pocket at an owner-estimated **US$485+/month** across cloud infrastructure and AI tooling. The figure is an unreconciled floor based on memory; spend is constrained by personal cash flow rather than technical readiness or lack of a plan.
+hOUR Chain is being specified and built by a solo founder, self-funded out of pocket at an owner-estimated **US$545+/month** across cloud infrastructure and AI tooling. The figure is an unreconciled floor based on memory; approximately US$60 of the updated total is not yet attributed to a specific provider or tool. Spend is constrained by personal cash flow rather than technical readiness or lack of a plan.
 
 Cloud credits would directly convert into shipped protocol work by extending infrastructure runway and freeing founder cash for implementation, security, and pilot delivery.
 
@@ -69,7 +69,7 @@ Do not present the superseded US$2,870/month scenario, invented AWS resources, d
 
 Use the following structure:
 
-- **Current:** approximately US$485+/month, owner-reported and pending billing reconciliation.
+- **Current:** approximately US$545+/month, owner-reported and pending billing reconciliation; approximately US$60 remains unattributed.
 - **Immediate optimization:** determine whether the two GCP full nodes can be resized, replaced, or moved safely.
 - **Credits request:** enough capacity to preserve essential infrastructure and ship a measured pilot without diverting scarce founder cash.
 - **Scale request:** deferred until 30 days of pilot utilization and unit-cost data exist.
