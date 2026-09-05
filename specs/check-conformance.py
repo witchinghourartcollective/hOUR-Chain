@@ -33,8 +33,13 @@ def check(name, condition, detail=""):
         failures.append(f"{name}\n      {detail}" if detail else name)
 
 
-schema = json.loads(SCHEMA_PATH.read_text())
-spec = SPEC_PATH.read_text()
+# Both reads and all output are explicitly ASCII-safe. These files are UTF-8,
+# but a checkout can be read under a locale whose preferred encoding is not
+# (LC_ALL=C gives ANSI_X3.4-1968), and the failure modes are asymmetric: an
+# implicit read breaks the moment SPEC.md gains an em dash, and a non-ASCII
+# glyph in the output crashes the script precisely when a check has failed.
+schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+spec = SPEC_PATH.read_text(encoding="utf-8")
 sig = schema["properties"]["signature"]
 sig_props = sig["properties"]
 sig_required = set(sig["required"])
@@ -121,7 +126,7 @@ check(
 if failures:
     print(f"FAIL  {len(failures)} of {checks} checks failed\n")
     for f in failures:
-        print(f"  ✗ {f}")
+        print(f"  FAIL: {f}")
     print("\nSPEC.md and specs/event-envelope.schema.json disagree. Fix one of them.")
     sys.exit(1)
 
