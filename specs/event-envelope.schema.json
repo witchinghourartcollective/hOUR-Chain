@@ -73,21 +73,34 @@
       "type": "object",
       "required": [
         "algorithm",
+        "suiteVersion",
         "signer",
         "value"
       ],
       "properties": {
         "algorithm": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "description": "Signature algorithm identifier, e.g. an ML-DSA or SLH-DSA parameter set. Deliberately not constrained to an enum here: ADR-0002 requires algorithms to be replaceable through explicit, delayed, auditable governance, so the accepted set lives in the signature-suite registry rather than in this schema, where changing it would be a schema break."
+        },
+        "suiteVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+){0,2}$",
+          "description": "Version of the signature suite that produced this signature. Required by SPEC.md. Constrained to dotted integers because downgrade resistance requires versions to be orderable: a validator must be able to decide that an offered suite is older than the minimum it will accept, which is not possible over free-form strings."
         },
         "signer": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifier resolving to the verification material for this signature. An identifier rather than an inline key: PQC public keys are large, and SPEC.md requires stable identity with rotatable authorization keys, which an indirection supports and an inline key does not."
         },
         "value": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "description": "Encoded signature over the canonical envelope."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Authorization for this envelope. SPEC.md requires a signature algorithm identifier, a signature-suite version, and verification material."
     }
   }
 }
