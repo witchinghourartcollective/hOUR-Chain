@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hourchain.example/registries/signature-suite-registry.json",
+  "title": "hOUR Chain Signature Suite Registry",
+  "description": "Candidate cryptographic suites for hOUR Chain authorization. This registry is not a production approval list.",
+  "registryVersion": "1.0.0",
+  "status": "experimental",
+  "defaultAcceptancePolicy": {
+    "unknownSuites": "reject",
+    "retiredSuites": "reject",
+    "downgrade": "reject",
+    "minimumSuiteVersion": "1.0.0"
+  },
+  "suites": [
+    {
+      "id": "ML-DSA-65",
+      "family": "module-lattice",
+      "standard": "FIPS 204",
+      "status": "candidate",
+      "acceptedVersions": ["1.0.0"],
+      "roles": ["event", "user", "agent", "deployment"],
+      "publicKeyBytes": 1952,
+      "signatureBytes": 3309,
+      "secretKeyBytes": 4032,
+      "encoding": "base64url",
+      "canonicalization": "JCS-RFC8785",
+      "domain": "HBC-EVENT-SIGNATURE-v1"
+    },
+    {
+      "id": "SLH-DSA-SHA2-128s",
+      "family": "stateless-hash",
+      "standard": "FIPS 205",
+      "status": "candidate",
+      "acceptedVersions": ["1.0.0"],
+      "roles": ["recovery", "governance", "root"],
+      "publicKeyBytes": 32,
+      "signatureBytes": 7856,
+      "secretKeyBytes": 64,
+      "encoding": "base64url",
+      "canonicalization": "JCS-RFC8785",
+      "domain": "HBC-EVENT-SIGNATURE-v1"
+    }
+  ]
+}

@@ -20,6 +20,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "specs" / "event-envelope.schema.json"
+REGISTRY_PATH = ROOT / "specs" / "signature-suite-registry.json"
 SPEC_PATH = ROOT / "SPEC.md"
 
 failures = []
@@ -39,6 +40,7 @@ def check(name, condition, detail=""):
 # implicit read breaks the moment SPEC.md gains an em dash, and a non-ASCII
 # glyph in the output crashes the script precisely when a check has failed.
 schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+registry = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
 spec = SPEC_PATH.read_text(encoding="utf-8")
 sig = schema["properties"]["signature"]
 sig_props = sig["properties"]
@@ -121,6 +123,54 @@ check(
     "signature is required on the envelope",
     "signature" in schema.get("required", []),
 )
+
+
+# --- ADR-0002: accepted algorithms live in a replaceable, auditable registry.
+# Keep this registry structural and policy-focused until a reviewed crypto
+# implementation and cross-language test vectors are added.
+version_pattern = re.compile(r"^[0-9]+(\.[0-9]+){0,2}$")
+check("signature-suite registry has an experimental status", registry.get("status") == "experimental")
+check("signature-suite registry has a version", version_pattern.fullmatch(registry.get("registryVersion", "")) is not None)
+policy = registry.get("defaultAcceptancePolicy", {})
+for policy_field in ["unknownSuites", "retiredSuites", "downgrade", "minimumSuiteVersion"]:
+    check(f"registry policy has {policy_field}", policy_field in policy)
+for policy_field in ["unknownSuites", "retiredSuites", "downgrade"]:
+    check(f"registry policy rejects {policy_field}", policy.get(policy_field) == "reject")
+check(
+    "registry policy minimum version is orderable",
+    version_pattern.fullmatch(policy.get("minimumSuiteVersion", "")) is not None,
+)
+
+suites = registry.get("suites", [])
+check("signature-suite registry has candidate suites", isinstance(suites, list) and len(suites) >= 1)
+suite_ids = [suite.get("id") for suite in suites if isinstance(suite, dict)]
+check("signature-suite identifiers are unique", len(suite_ids) == len(set(suite_ids)))
+for suite in suites:
+    suite_id = suite.get("id", "<missing>")
+    check(f"{suite_id} has a FIPS standard", bool(re.fullmatch(r"FIPS [0-9]+", suite.get("standard", ""))))
+    check(f"{suite_id} remains a candidate", suite.get("status") == "candidate")
+    accepted_versions = suite.get("acceptedVersions")
+    check(
+        f"{suite_id} has accepted versions",
+        isinstance(accepted_versions, list) and len(accepted_versions) > 0,
+    )
+    if isinstance(accepted_versions, list):
+        for version in accepted_versions:
+            check(
+                f"{suite_id} accepted version is orderable",
+                version_pattern.fullmatch(version) is not None,
+            )
+        check(
+            f"{suite_id} accepted versions are unique",
+            len(accepted_versions) == len(set(accepted_versions)),
+        )
+    check(f"{suite_id} has an explicit domain", suite.get("domain") == "HBC-EVENT-SIGNATURE-v1")
+    check(f"{suite_id} uses JCS", suite.get("canonicalization") == "JCS-RFC8785")
+    check(
+        f"{suite_id} has positive key and signature sizes",
+        all(isinstance(suite.get(field), int) and suite[field] > 0 for field in ["publicKeyBytes", "signatureBytes", "secretKeyBytes"]),
+    )
+    check(f"{suite_id} declares roles", isinstance(suite.get("roles"), list) and len(suite["roles"]) > 0)
 
 
 if failures:
