@@ -4,7 +4,7 @@ Status: owner-reported Phase 0 baseline for hOUR Chain pilot readiness. Provider
 
 ## Decision summary
 
-The current operating-cost floor is approximately **US$545/month**, self-funded by a solo founder. This is an estimate from memory, not a billing-derived total. It describes current spend constrained by available personal cash, not the infrastructure required for a scaled pilot.
+The current operating-cost floor is approximately **US$569/month**, self-funded by a solo founder. This is an estimate from memory, not a billing-derived total. It describes current spend constrained by available personal cash, not the infrastructure required for a scaled pilot.
 
 Do not use the superseded US$2,870/month scenario, US$143.50 per-creator figure, or claims about AWS/Postgres/Redis duplication. Those figures and findings were not based on deployed infrastructure or billing data. There is currently **no AWS spend**.
 
@@ -19,15 +19,18 @@ Do not use the superseded US$2,870/month scenario, US$143.50 per-creator figure,
 | Gemini | AI tooling | ~$10 | Confirm subscription invoice |
 | Cloudflare | DNS/edge services | ~$5 | Confirm invoice |
 | GitHub | Enterprise, Business, and Copilot | ~$60+ | Owner-attributed, stated as a floor; confirm seat counts and plan tier from invoice |
-| **Approximate total** |  | **~$545+** | Floor pending reconciliation |
+| DigitalOcean | Lightning node: 2 vCPU / 4 GiB / 80 GiB droplet running pruned Bitcoin Core plus LND | ~$24 | Provisioned and running; confirm plan and any add-ons from invoice |
+| **Approximate total** |  | **~$569+** | Floor pending reconciliation |
 
 The estimate excludes any unremembered usage, taxes, chain fees, one-off media processing, and future pilot infrastructure.
 
-## Verified Lightning sizing reference
+## Lightning host: provisioned and running
 
-A separately evaluated Lightning host is approximately **US$24/month** for a VPS with 2 vCPU, 4 GB RAM, and about 80 GB disk, running pruned Bitcoin Core (`prune=20000`, `txindex=0`) plus LND. A permanent Azure VM estimated near US$70/month was rejected on cost.
+The Lightning node now runs on a DigitalOcean droplet at approximately **US$24/month** — 2 vCPU, 4 GiB RAM, 80 GiB disk, running pruned Bitcoin Core (`prune=20000`, `txindex=0`) plus LND. A permanent Azure VM estimated near US$70/month was rejected on cost.
 
-This reference is not included in the US$545 total unless the VPS is actually provisioned and billed.
+Earlier versions of this document carried that figure as a sizing reference and excluded it from the total, on the condition that it be counted "unless the VPS is actually provisioned and billed". It is now provisioned, synced and billed, so it is a line item above and the floor moved from US$545 to US$569.
+
+The node migrated off the workstation. Two copies of one wallet must never run at once: once the cloud node connected to peers the workstation copy was retired permanently, because restarting it would publish stale channel state that peers can penalise.
 
 ## Node decision: retain, resize, or retire
 
@@ -62,7 +65,7 @@ Funding should buy execution capacity and validated pilot infrastructure, not co
 
 Current position:
 
-- Solo founder, self-funded at approximately US$545+/month.
+- Solo founder, self-funded at approximately US$569+/month.
 - Scope is limited by personal cash flow, not lack of a protocol plan.
 - Cloud credits directly extend runway and convert into engineering, testing, security, and pilot delivery.
 - AWS credits are prospective capacity; they must not be described as reimbursement for existing AWS spend.
@@ -71,7 +74,7 @@ Current position:
 
 | Funding case | Evidence available now | What must be measured next | Decision |
 | --- | --- | --- | --- |
-| Keep current operations online | Owner-reported ~$545+/month floor | Billing exports and essential-resource map | Fund only verified essential resources |
+| Keep current operations online | Owner-reported ~$569+/month floor | Billing exports and essential-resource map | Fund only verified essential resources |
 | Replace/resize GCP nodes | Two nodes represent most remembered spend | Per-node cost, utilization, workload dependencies, managed-RPC comparison | First optimization experiment |
 | Run Lightning continuously | ~$24/month verified VPS sizing | Migration/recovery checklist and 30-day stability | Fund after safe migration plan |
 | Creator pilot | Product/protocol plan exists | Number of active creators, registered works, settlement events, support time, chain/RPC cost | Do not publish per-creator economics until measured |
