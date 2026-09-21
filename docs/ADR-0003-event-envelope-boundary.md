@@ -1,6 +1,6 @@
 # ADR-0003: Boundary between the hOUR Chain envelope and the platform envelope
 
-Status: Proposed
+Status: Accepted (2026-09-21)
 
 ## Context
 

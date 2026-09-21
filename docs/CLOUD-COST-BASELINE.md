@@ -24,6 +24,29 @@ Do not use the superseded US$2,870/month scenario, US$143.50 per-creator figure,
 
 The estimate excludes any unremembered usage, taxes, chain fees, one-off media processing, and future pilot infrastructure.
 
+## Missing expense inventory (not yet included in US$569+)
+
+The current total is an **operating floor**, not a pilot-at-scale or production-at-scale budget. Add these only from invoices or measured usage; do not guess them into the reconciled total.
+
+| Expense | Cost treatment | Evidence needed |
+| --- | --- | --- |
+| Shopify | Recurring commerce plan, apps, domain and possible transaction fees | Current plan invoice and installed paid-app list |
+| Stripe | Primarily variable payment-processing, dispute and payout fees; not ordinary fixed cloud spend | 90-day balance/fee export and expected pilot payment volume |
+| GitHub Copilot | Already reported inside the US$60+ GitHub line; do not double-count | GitHub invoice separating organization plan, Actions/LFS and Copilot seats |
+| Claude | Already included at ~US$20; usage-based API spend, if any, must be separate | Subscription and API billing exports |
+| ChatGPT / Codex | ChatGPT Business is included at ~US$50; any separate Codex/API usage must be a separate line | OpenAI subscription and API usage invoices |
+| Gemini / Google AI | Gemini subscription is included at ~US$10; distinguish it from GCP model/API spend | Subscription invoice plus GCP SKU export |
+| Domains, email and storefront tooling | Zoho, registrar, SoundCloud/artist services and other production subscriptions may support the business but are not yet reconciled | Subscription inventory and invoices |
+| Chain/RPC/storage/security | Variable costs expected to grow with transactions, archival evidence, indexing, observability and audits | Pilot load assumptions and 30 days of measured unit costs |
+
+## Three cost views
+
+1. **Current operating floor:** verified invoices for keeping the existing ecosystem online. Today this remains owner-reported at approximately US$569+ pending exports.
+2. **Pilot minimum:** current essential spend plus only the incremental resources required for 1–3 releases, a Base testnet flow, evidence storage, monitoring and recovery.
+3. **Scaled forecast:** a scenario model driven by active creators, works, events, payments, storage, RPC traffic, availability targets and support/security requirements. It will be higher than the current floor and must be presented as a forecast range, not current burn.
+
+A defensible scale forecast requires explicit load assumptions and low/base/high cases. The present US$569+ figure must never be described as “hOUR Chain at scale.”
+
 ## Lightning host: provisioned and running
 
 The Lightning node now runs on a DigitalOcean droplet at approximately **US$24/month** — 2 vCPU, 4 GiB RAM, 80 GiB disk, running pruned Bitcoin Core (`prune=20000`, `txindex=0`) plus LND. A permanent Azure VM estimated near US$70/month was rejected on cost.

@@ -1,0 +1,60 @@
+{
+  "fixtureVersion": "0.1",
+  "status": "template",
+  "release": {
+    "releaseId": "release_tbd",
+    "title": "TBD",
+    "version": "original",
+    "artistProject": "TBD",
+    "releaseType": "music",
+    "targetReleaseDate": null,
+    "identifiers": {
+      "isrc": null,
+      "upc": null,
+      "iswc": null
+    }
+  },
+  "contributors": [
+    {
+      "participantId": "participant_creator_001",
+      "displayName": "TBD",
+      "roles": ["primary_artist"],
+      "wallet": null,
+      "walletRequired": false,
+      "payoutPreference": "unselected",
+      "consent": {
+        "status": "pending",
+        "recordedAt": null,
+        "evidenceRef": null
+      }
+    }
+  ],
+  "splits": {
+    "master": [
+      {
+        "participantId": "participant_creator_001",
+        "basisPoints": 10000
+      }
+    ],
+    "composition": [
+      {
+        "participantId": "participant_creator_001",
+        "basisPoints": 10000
+      }
+    ]
+  },
+  "evidence": [],
+  "expectedEvents": [
+    "work.registered",
+    "contributors.proposed",
+    "splits.approved",
+    "release.published",
+    "settlement.instructed",
+    "settlement.receipted"
+  ],
+  "safety": {
+    "network": "base-sepolia",
+    "liveFundsAllowed": false,
+    "privateKeysInFixtureAllowed": false
+  }
+}
