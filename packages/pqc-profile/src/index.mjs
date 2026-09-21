@@ -68,4 +68,4 @@ export function verifyEnvelope(envelope, publicKey) {
 }
 
 export { canonicalSigningBytes } from "./canonicalize.mjs";
-export { getRegistry, getSuite } from "./registry.mjs";
+export { getRegistry, getResearchCandidate, getSuite } from "./registry.mjs";

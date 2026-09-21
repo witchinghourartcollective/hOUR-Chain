@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import {
   canonicalSigningBytes,
   generateTestKeyPair,
+  getRegistry,
+  getResearchCandidate,
+  getSuite,
   verifyEnvelope,
   signEnvelope,
 } from "../src/index.mjs";
@@ -91,4 +94,17 @@ test("unsupported or downgraded suites fail closed", () => {
     () => signEnvelope(envelope(), privateKey, { suiteVersion: "latest", signer: "identity:creator:test-key-1" }),
     /Invalid signature suite version/,
   );
+});
+
+test("research suites are registered but cannot be used without a local provider", () => {
+  const registry = getRegistry();
+  const suite = getSuite("Falcon-512", "1.0.0");
+  assert.equal(suite.implementation, "unavailable");
+  assert.equal(suite.status, "candidate");
+  for (const algorithm of ["HAWK-512", "FAEST-EM-128f", "MAYO-1", "SNOVA-24-5-4", "LMS-M4-H20-W8", "XMSS-MT"]) {
+    const suite = getResearchCandidate(algorithm, "1.0.0");
+    assert.equal(suite.implementation, "unavailable");
+    assert.match(suite.status, /research/);
+  }
+  assert.equal(registry.suites.some(({ id }) => id === "Falcon-512"), true);
 });

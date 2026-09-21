@@ -11,6 +11,7 @@ const nodeKeyTypes = {
 const versionPattern = /^[0-9]+(\.[0-9]+){0,2}$/u;
 
 const suites = new Map(registry.suites.map((suite) => [suite.id, suite]));
+const researchCandidates = new Map((registry.researchCandidates ?? []).map((suite) => [suite.id, suite]));
 
 function compareVersions(left, right) {
   const a = left.split(".").map(Number);
@@ -36,6 +37,15 @@ export function getSuite(algorithm, suiteVersion) {
     throw new Error(`Signature suite version is below the accepted minimum: ${suiteVersion}`);
   }
   return suite;
+}
+
+export function getResearchCandidate(algorithm, suiteVersion = "1.0.0") {
+  const candidate = researchCandidates.get(algorithm);
+  if (!candidate) throw new Error(`Unknown research candidate: ${algorithm}`);
+  if (!Array.isArray(candidate.acceptedVersions) || !candidate.acceptedVersions.includes(suiteVersion)) {
+    throw new Error(`Unregistered research candidate version: ${suiteVersion}`);
+  }
+  return candidate;
 }
 
 export function getNodeKeyType(algorithm) {
