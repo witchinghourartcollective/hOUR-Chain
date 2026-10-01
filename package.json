@@ -3,8 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24.7"
+  },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "check:conformance": "python3 specs/check-conformance.py",
+    "check": "npm test && npm run check:conformance"
   },
   "dependencies": {
     "canonicalize": "^5.0.0"

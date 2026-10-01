@@ -42,7 +42,7 @@ Funding requests should map to time-bounded deliverables:
 
 ## Funding ladder
 
-1. **Cloud credits:** Google for Startups Cloud Program, Microsoft for Startups Founders Hub, and AWS Activate.
+1. **Cloud credits:** Google for Startups Cloud Program (see `GOOGLE-WEB3-CREDITS.md`), Microsoft for Startups Founders Hub, and AWS Activate.
 2. **Infrastructure partners:** RPC, storage, observability, security, and developer-tool credits tied to a defined pilot.
 3. **Base ecosystem support:** after a deployed Base testnet workflow and measurable ecosystem contribution.
 4. **Filecoin ecosystem support:** only for a real decentralized evidence/archive integration.

@@ -29,17 +29,29 @@ Pre-alpha protocol definition. Phase 1 uses **Base** as the canonical EVM settle
 
 ## Repository map
 
-- `specs/` — protocol, state transitions, identifiers, and schemas.
-- `contracts/` — future Base contracts and tests.
-- `sdk/` — TypeScript SDK and Phigit Python adapter.
-- `indexer/` — event ingestion and verified read model.
-- `apps/explorer/` — future protocol explorer.
-- `adapters/` — Phigit, Witching Hour App, Live App, agent, Lightning, and Solana.
-- `docs/` — trust, threats, architecture decisions, funding, compliance, and operations.
+What exists today:
+
+- `SPEC.md`, `TRUST-MODEL.md`, `THREAT-MODEL.md` — protocol specification and security model.
+- `specs/` — canonical event-envelope schema, signature-suite registry, conformance check, and the first-release fixture template.
+- `packages/pqc-profile/` — reference implementation of the PQC signing profile: canonical signing bytes, ML-DSA-65 and SLH-DSA-SHA2-128s sign/verify, and fail-closed suite/version checks.
+- `docs/` — architecture decisions, signature canonicalization, first-release pilot, funding, and cloud-cost baseline.
+
+Planned, not yet started: Base contracts, TypeScript SDK and Phigit Python adapter, indexer and verified read model, protocol explorer, and Phigit / Witching Hour App / Live App / agent / Lightning / Solana adapters.
+
+## Quick start
+
+Requires Node.js 24.7 or later (native ML-DSA and SLH-DSA in `node:crypto`) and Python 3.
+
+```sh
+npm ci
+npm test                 # PQC signing-profile tests
+npm run check:conformance  # SPEC.md and the envelope schema agree
+```
 
 ## Decisions
 
 - [ADR-0001](docs/ADR-0001-phase-1-settlement.md) — Base as the Phase 1 settlement network.
+- [ADR-0002](docs/ADR-0002-post-quantum-native-cryptography.md) — post-quantum-native cryptography.
 - [ADR-0003](docs/ADR-0003-event-envelope-boundary.md) — boundary between this
   envelope and the `witching-hour-platform` envelope, and where Lightning
   telemetry versus Lightning settlement each belong.
