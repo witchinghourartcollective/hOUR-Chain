@@ -35,7 +35,7 @@ Name only components that are running and can be demonstrated on request:
 - Witching Hour App: creator-facing web product.
 - Lightning node on a DigitalOcean host, with live channels.
 - WHM onchain agent: automated wallet and payment workflows on Base.
-- hOUR Chain PQC signing profile: ML-DSA-65 and SLH-DSA-SHA2-128s signed event envelopes, a fail-closed suite registry, and CI-tested conformance between the spec and the schema (`packages/pqc-profile/`, `specs/`).
+- hOUR Chain PQC signing profile: ML-DSA-65 and SLH-DSA-SHA2-128s signed event envelopes, a fail-closed suite registry, and tested conformance between the spec and the schema (`packages/pqc-profile/`, `specs/`).
 
 Don't describe hOUR Chain as a live chain, L1, or mainnet (README status).
 
