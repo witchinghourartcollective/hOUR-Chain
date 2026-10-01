@@ -20,9 +20,9 @@ Google evaluates funding that doesn't qualify for Scale (crowdfunding, friends a
 
 | Requirement | Status | Evidence / action |
 | --- | --- | --- |
-| Business email on the startup's website domain | Ready | `@witchinghourmac.com` mailbox (Zoho MX); site live at <https://witchinghourmac.com> |
-| 18-character Google Cloud billing account ID | Owner to confirm | Use the billing account that will carry hOUR Chain workloads |
-| No prior Google Cloud credits beyond the free trial (Start) | **Owner to confirm** | Check *Billing → Credits* on every billing account the company has used |
+| Business email on the startup's website domain | **Blocked on website** | Applying as `mirrorz@mirrorizm.com` (Zoho MX), so the website is `mirrorizm.com`. As of 2026-10-01 that domain serves a password-locked Shopify "Opening soon" page that never mentions hOUR Chain or Web3. A reviewer can't verify the startup from it. `mirrorizm.com` needs a public page describing hOUR Chain before submitting |
+| 18-character Google Cloud billing account ID | Owner to confirm | The `mirrorz@mirrorizm.com` billing account |
+| No prior Google Cloud credits beyond the free trial (Start) | **Owner to confirm** | Check *Billing → Credits* on the `mirrorz@mirrorizm.com` billing account |
 | Founded within the last 24 months (Start) | **Owner to confirm** | Use the legal entity's formation date. If the entity is older, Start is closed and the route is a Scale-qualifying grant |
 | Working MVP | Partial | This repo is pre-alpha. Present the running ecosystem as the MVP (see below), with hOUR Chain as the protocol layer being built on it |
 | Not an excluded category | Ready, with care | Excluded categories include mining companies and companies distributing tokens contrary to regulatory guidance. The application must not mention a token sale (`FUNDING.md` rule), and it must keep any ecosystem token activity separate from hOUR Chain, as `FIRST-RELEASE-PILOT.md` already requires |
@@ -53,6 +53,8 @@ under "Evidence gates".
 | Chain analytics | BigQuery public blockchain datasets | Settlement-receipt reconciliation without running archive nodes | Receipt reconciliation query for pilot settlements |
 
 A Start-tier grant of up to US$2,000 should cover the first two to three rows for the pilot period. The application should say so, rather than presenting US$2,000 as a fix for the full US$569+/month floor.
+
+Credits are the funding mechanism here, not a supplement. Existing paid accounts (GitHub, the `witchinghourmac.com` billing) can't be funded right now; GitHub Actions CI in this repo won't run until GitHub billing is restored. Don't link CI status badges or Actions results in the application.
 
 ## Draft application answers
 
