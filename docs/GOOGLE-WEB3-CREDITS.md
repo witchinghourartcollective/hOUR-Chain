@@ -20,7 +20,7 @@ Google evaluates funding that doesn't qualify for Scale (crowdfunding, friends a
 
 | Requirement | Status | Evidence / action |
 | --- | --- | --- |
-| Business email on the startup's website domain | Live, needs content | Applying as `mirrorz@mirrorizm.com` (Zoho MX). `mirrorizm.com` is a public Shopify site as of 2026-10-02. Its homepage is an artist portfolio, which risks the "personal blogs or content" exclusion, so put the full hOUR Chain content on `/pages/hour-chain` (paste-ready section: `~/mirrorizm/landing/shopify-hour-chain-section.html`) and give that URL as the product link. Unpublish the LED vanity-mirror product. Name the company the same way everywhere: Witching Hour Music |
+| Business email on the startup's website domain | Live, needs content | Applying as `mirrorz@mirrorizm.com` (Zoho MX). `mirrorizm.com` is a public Shopify site as of 2026-10-02. Its homepage is an artist portfolio, which risks the "personal blogs or content" exclusion, so put the full hOUR Chain content on `/pages/hour-chain` (paste-ready section: `~/mirrorizm/landing/shopify-hour-chain-section.html`) and give that URL as the product link. Unpublish the LED vanity-mirror product. Name the company the same way everywhere: Witching Hour Music (legal entity) |
 | 18-character Google Cloud billing account ID | Owner to confirm | The `mirrorz@mirrorizm.com` billing account |
 | No prior Google Cloud credits beyond the free trial (Start) | Ready | Owner confirmed 2026-10-02: only the standard US$300 free-trial credit, which the program excludes from this rule |
 | Founded within the last 24 months (Start) | Ready | Owner confirmed 2026-10-02. Have the formation document on hand in case Google asks |
@@ -58,9 +58,11 @@ Credits are the funding mechanism here, not a supplement. Existing paid accounts
 
 ## Draft application answers
 
-**Company name.** Witching Hour Music and Art Collective: the exact legal name,
-matching the formation document and Filecoin Open Grant #2182. Use it on every
-application, even though the email and website (`mirrorizm.com`) differ.
+**Company name.** Witching Hour Music: the exact legal entity name, as on the
+formation document. Use it on every application (Google, Filecoin #2182,
+Solana Foundation), even though the email and website (`mirrorizm.com`) differ.
+"Witching Hour Music and Art Collective" is the collective's brand, not the
+legal entity.
 
 **One-line description.** hOUR Chain is a post-quantum-native protocol for
 creator rights, provenance, and settlement: collaborators approve credits with a
