@@ -1,6 +1,6 @@
 # ADR-0001: Use Base for Phase 1 settlement
 
-Status: Accepted
+Status: Accepted. The role of Solana is amended by [ADR-0004](ADR-0004-solana-consent-base-payments.md) (Solana = consent/attestations; Base = payments).
 
 ## Decision
 

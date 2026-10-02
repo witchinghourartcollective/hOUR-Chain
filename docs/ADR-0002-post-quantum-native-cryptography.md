@@ -43,7 +43,7 @@ These choices are architectural requirements, not final parameter selections. Be
 
 ## Phase 1 consequence
 
-Phase 1 continues to use Base as the canonical EVM settlement rail, with Lightning and Solana as adapters. hOUR Chain can issue PQC-signed protocol events before those external rails are fully post-quantum, but documentation and verification MUST distinguish:
+Phase 1 continues to use Base as the canonical EVM settlement rail, with Solana as the consent/attestation chain (ADR-0004) and Lightning as a planned adapter. hOUR Chain can issue PQC-signed protocol events before those external rails are fully post-quantum, but documentation and verification MUST distinguish:
 
 1. the validity of an hOUR Chain PQC signature;
 2. authorization and settlement performed by an external network; and

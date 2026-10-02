@@ -4,7 +4,14 @@ hOUR Chain is the creator rights, provenance, access, and settlement protocol fo
 
 ## Status
 
-Pre-alpha protocol definition. Phase 1 uses **Base** as the canonical EVM settlement network, with Bitcoin Lightning and Solana implemented as adapters. hOUR Chain is not yet an independent L1, validator network, or mainnet.
+Pre-alpha protocol definition. Chain roles (see [ADR-0004](docs/ADR-0004-solana-consent-base-payments.md)):
+
+- **Solana:** primary chain for approvals/consent and attestations. **In progress** (pre-alpha) in [`hour-chain-solana`](https://github.com/witchinghourartcollective/hour-chain-solana).
+- **Base:** payments/settlement and canonical EVM records. **Planned**; no contracts deployed yet.
+- **Filecoin:** durable evidence/archive layer in [`hour-chain-filecoin`](https://github.com/witchinghourartcollective/hour-chain-filecoin).
+- **Bitcoin Lightning:** payment adapter. **Planned.**
+
+hOUR Chain is not yet an independent L1, validator network, or mainnet.
 
 **Security direction:** hOUR Chain is post-quantum-native by design. Post-quantum authorization, algorithm agility, and protocol-level key rotation are genesis requirements, including for users, validators, governance, treasury, recovery, bridges, proofs, and upgrades. See [ADR-0002](docs/ADR-0002-post-quantum-native-cryptography.md).
 
@@ -34,12 +41,14 @@ Pre-alpha protocol definition. Phase 1 uses **Base** as the canonical EVM settle
 - `sdk/` — TypeScript SDK and Phigit Python adapter.
 - `indexer/` — event ingestion and verified read model.
 - `apps/explorer/` — future protocol explorer.
-- `adapters/` — Phigit, Witching Hour App, Live App, agent, Lightning, and Solana.
+- `adapters/` — planned: Phigit, Witching Hour App, Live App, agent, and Lightning. (Solana consent/attestations live in [`hour-chain-solana`](https://github.com/witchinghourartcollective/hour-chain-solana); Filecoin evidence in [`hour-chain-filecoin`](https://github.com/witchinghourartcollective/hour-chain-filecoin).)
 - `docs/` — trust, threats, architecture decisions, funding, compliance, and operations.
 
 ## Decisions
 
 - [ADR-0001](docs/ADR-0001-phase-1-settlement.md) — Base as the Phase 1 settlement network.
+- [ADR-0004](docs/ADR-0004-solana-consent-base-payments.md) — Solana for consent and
+  attestations, Base for payments (amends ADR-0001).
 - [ADR-0003](docs/ADR-0003-event-envelope-boundary.md) — boundary between this
   envelope and the `witching-hour-platform` envelope, and where Lightning
   telemetry versus Lightning settlement each belong.
