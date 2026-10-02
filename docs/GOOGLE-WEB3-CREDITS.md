@@ -20,7 +20,7 @@ Google evaluates funding that doesn't qualify for Scale (crowdfunding, friends a
 
 | Requirement | Status | Evidence / action |
 | --- | --- | --- |
-| Business email on the startup's website domain | **Blocked on website** | Applying as `mirrorz@mirrorizm.com` (Zoho MX), so the website is `mirrorizm.com`. As of 2026-10-01 that domain serves a password-locked Shopify "Opening soon" page that never mentions hOUR Chain or Web3. A reviewer can't verify the startup from it. `mirrorizm.com` needs a public page describing hOUR Chain before submitting |
+| Business email on the startup's website domain | Live, needs content | Applying as `mirrorz@mirrorizm.com` (Zoho MX). `mirrorizm.com` is a public Shopify site as of 2026-10-02. Its homepage is an artist portfolio, which risks the "personal blogs or content" exclusion, so put the full hOUR Chain content on `/pages/hour-chain` (paste-ready section: `~/mirrorizm/landing/shopify-hour-chain-section.html`) and give that URL as the product link. Unpublish the LED vanity-mirror product. Name the company the same way everywhere: Witching Hour Music |
 | 18-character Google Cloud billing account ID | Owner to confirm | The `mirrorz@mirrorizm.com` billing account |
 | No prior Google Cloud credits beyond the free trial (Start) | **Owner to confirm** | Check *Billing → Credits* on the `mirrorz@mirrorizm.com` billing account |
 | Founded within the last 24 months (Start) | **Owner to confirm** | Use the legal entity's formation date. If the entity is older, Start is closed and the route is a Scale-qualifying grant |
