@@ -36,15 +36,17 @@ hOUR Chain is not yet an independent L1, validator network, or mainnet.
 
 ## Repository map
 
-<<<<<<< HEAD
 What exists today:
 
 - `SPEC.md`, `TRUST-MODEL.md`, `THREAT-MODEL.md` — protocol specification and security model.
 - `specs/` — canonical event-envelope schema, signature-suite registry, conformance check, and the first-release fixture template.
 - `packages/pqc-profile/` — reference implementation of the PQC signing profile: canonical signing bytes, ML-DSA-65 and SLH-DSA-SHA2-128s sign/verify, and fail-closed suite/version checks.
 - `docs/` — architecture decisions, signature canonicalization, first-release pilot, funding, and cloud-cost baseline.
+- `site/` — the mirrorizm.com landing page and its Shopify section.
 
-Planned, not yet started: Base contracts, TypeScript SDK and Phigit Python adapter, indexer and verified read model, protocol explorer, and Phigit / Witching Hour App / Live App / agent / Lightning / Solana adapters.
+Related repositories: Solana consent and attestations in [`hour-chain-solana`](https://github.com/witchinghourartcollective/hour-chain-solana); Filecoin evidence in [`hour-chain-filecoin`](https://github.com/witchinghourartcollective/hour-chain-filecoin).
+
+Planned, not yet started: Base contracts, TypeScript SDK and Phigit Python adapter, indexer and verified read model, protocol explorer, and Phigit / Witching Hour App / Live App / agent / Lightning adapters.
 
 ## Quick start
 
@@ -55,25 +57,13 @@ npm ci
 npm test                 # PQC signing-profile tests
 npm run check:conformance  # SPEC.md and the envelope schema agree
 ```
-=======
-- `specs/` — protocol, state transitions, identifiers, and schemas.
-- `contracts/` — future Base contracts and tests.
-- `sdk/` — TypeScript SDK and Phigit Python adapter.
-- `indexer/` — event ingestion and verified read model.
-- `apps/explorer/` — future protocol explorer.
-- `adapters/` — planned: Phigit, Witching Hour App, Live App, agent, and Lightning. (Solana consent/attestations live in [`hour-chain-solana`](https://github.com/witchinghourartcollective/hour-chain-solana); Filecoin evidence in [`hour-chain-filecoin`](https://github.com/witchinghourartcollective/hour-chain-filecoin).)
-- `docs/` — trust, threats, architecture decisions, funding, compliance, and operations.
->>>>>>> origin/main
 
 ## Decisions
 
 - [ADR-0001](docs/ADR-0001-phase-1-settlement.md) — Base as the Phase 1 settlement network.
-<<<<<<< HEAD
 - [ADR-0002](docs/ADR-0002-post-quantum-native-cryptography.md) — post-quantum-native cryptography.
-=======
 - [ADR-0004](docs/ADR-0004-solana-consent-base-payments.md) — Solana for consent and
   attestations, Base for payments (amends ADR-0001).
->>>>>>> origin/main
 - [ADR-0003](docs/ADR-0003-event-envelope-boundary.md) — boundary between this
   envelope and the `witching-hour-platform` envelope, and where Lightning
   telemetry versus Lightning settlement each belong.
