@@ -22,8 +22,8 @@ Google evaluates funding that doesn't qualify for Scale (crowdfunding, friends a
 | --- | --- | --- |
 | Business email on the startup's website domain | Live, needs content | Applying as `mirrorz@mirrorizm.com` (Zoho MX). `mirrorizm.com` is a public Shopify site as of 2026-10-02. Its homepage is an artist portfolio, which risks the "personal blogs or content" exclusion, so put the full hOUR Chain content on `/pages/hour-chain` (paste-ready section: `~/mirrorizm/landing/shopify-hour-chain-section.html`) and give that URL as the product link. Unpublish the LED vanity-mirror product. Name the company the same way everywhere: Witching Hour Music |
 | 18-character Google Cloud billing account ID | Owner to confirm | The `mirrorz@mirrorizm.com` billing account |
-| No prior Google Cloud credits beyond the free trial (Start) | **Owner to confirm** | Check *Billing → Credits* on the `mirrorz@mirrorizm.com` billing account |
-| Founded within the last 24 months (Start) | **Owner to confirm** | Use the legal entity's formation date. If the entity is older, Start is closed and the route is a Scale-qualifying grant |
+| No prior Google Cloud credits beyond the free trial (Start) | Ready | Owner confirmed 2026-10-02: only the standard US$300 free-trial credit, which the program excludes from this rule |
+| Founded within the last 24 months (Start) | Ready | Owner confirmed 2026-10-02. Have the formation document on hand in case Google asks |
 | Working MVP | Partial | This repo is pre-alpha. Present the running ecosystem as the MVP (see below), with hOUR Chain as the protocol layer being built on it |
 | Not an excluded category | Ready, with care | Excluded categories include mining companies and companies distributing tokens contrary to regulatory guidance. The application must not mention a token sale (`FUNDING.md` rule), and it must keep any ecosystem token activity separate from hOUR Chain, as `FIRST-RELEASE-PILOT.md` already requires |
 | Workspace rule | Check | The company domain must not have moved to a paid Google Workspace plan within 31 days of applying |
@@ -98,5 +98,3 @@ usage.
    conflicts with any policy of self-hosting only free/open-source software.
    Decide which workloads move to Google Cloud before naming them in the
    application.
-3. **Entity formation date and prior credits**, which decide whether Start is
-   available at all.
