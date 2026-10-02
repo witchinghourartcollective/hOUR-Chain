@@ -78,7 +78,7 @@ See `docs/ADR-0002-post-quantum-native-cryptography.md`.
 
 ## Phase 1 settlement
 
-Base is canonical for EVM records and receipts. Lightning and Solana are adapter networks. Cross-chain bridges are not protocol dependencies in Phase 1. Because these settlement rails are not themselves fully post-quantum, Phase 1 MUST distinguish hOUR-signed PQC records from the quantum security of an external settlement receipt.
+Base is canonical for EVM records and the payments/settlement network. Solana is the primary chain for approvals/consent and attestations (ADR-0004; implementation in progress in `hour-chain-solana`). Lightning is a planned adapter network. Cross-chain bridges are not protocol dependencies in Phase 1. Because these settlement rails are not themselves fully post-quantum, Phase 1 MUST distinguish hOUR-signed PQC records from the quantum security of an external settlement receipt.
 
 ## State model
 

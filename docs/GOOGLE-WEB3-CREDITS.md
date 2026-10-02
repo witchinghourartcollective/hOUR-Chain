@@ -58,9 +58,14 @@ Credits are the funding mechanism here, not a supplement. Existing paid accounts
 
 ## Draft application answers
 
+**Company name.** Witching Hour Music and Art Collective: the exact legal name,
+matching the formation document and Filecoin Open Grant #2182. Use it on every
+application, even though the email and website (`mirrorizm.com`) differ.
+
 **One-line description.** hOUR Chain is a post-quantum-native protocol for
-creator rights, provenance, and settlement, built for the Witching Hour music
-and art ecosystem and settling on Base.
+creator rights, provenance, and settlement: collaborators approve credits with a
+passkey on Solana, payments settle on Base, and evidence is archived on Filecoin
+(ADR-0004).
 
 **Problem.** Independent artists and collaborators lack a verifiable,
 portable record of who made a work, how rights and splits changed, and whether
@@ -70,8 +75,10 @@ cryptographically relevant quantum computer.
 
 **What's built.** A specified event envelope with versioned, downgrade-resistant
 signature suites; a reference ML-DSA-65 / SLH-DSA implementation with
-fail-closed verification; a wallet-optional first-release pilot design; and a
-running ecosystem (web app, Lightning node, Base onchain agent) that the protocol
+fail-closed verification; a Solana program that verifies passkey consent
+onchain, with end-to-end tests (`hour-chain-solana`, not yet deployed); an
+evidence-bundle verifier for Filecoin (`hour-chain-filecoin`); and a running
+ecosystem (web app, Lightning node, Base onchain agent) that the protocol
 will serve.
 
 **Business model.** Paid creator pilots for rights setup, provenance,
@@ -81,6 +88,11 @@ for labels, collectives, and live-event operators.
 **Why Google Cloud.** Cloud KMS's quantum-safe signatures match the protocol's
 signature suites one-for-one. Blockchain RPC replaces a self-hosted node that
 proved costly to operate.
+
+**Other funding in progress.** Filecoin Open Grant #2182 (US$50,000, open) and
+a Solana Foundation grant proposal (pending). If either is awarded it is a
+blockchain-foundation grant, which makes the company eligible for the Scale tier
+(up to US$200,000); re-apply then.
 
 **Funding status.** Self-funded by a solo founder at approximately
 US$569+/month (owner-reported, pending billing reconciliation). Planning to
