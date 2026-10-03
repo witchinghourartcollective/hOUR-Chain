@@ -1,0 +1,170 @@
+<!--
+  hOUR Chain page for mirrorizm.com (Shopify).
+  Paste into: Online Store → Themes → Customize → Pages → hour-chain template
+  → Add section → "Custom Liquid", then paste this whole file.
+  All styles are scoped under .hc so they can't affect the rest of the theme.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Atkinson+Hyperlegible:wght@400;700&family=Martian+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  .hc {
+    --night: #1d1a3a; --night-deep: #14122a; --sodium: #f2a541;
+    --moon: #ece8f4; --haze: #a39fc0; --brick: #d0607a;
+    --rule: rgba(236, 232, 244, 0.14);
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --body: "Atkinson Hyperlegible", system-ui, sans-serif;
+    --mono: "Martian Mono", ui-monospace, monospace;
+    background: radial-gradient(60rem 40rem at 85% -10%, rgba(242, 165, 65, 0.13), transparent 70%), var(--night);
+    color: var(--moon); font: 400 1.0625rem/1.6 var(--body);
+    -webkit-font-smoothing: antialiased;
+  }
+  .hc *, .hc *::before, .hc *::after { box-sizing: border-box; }
+  .hc a { color: inherit; }
+  .hc a:focus-visible { outline: 2px solid var(--sodium); outline-offset: 3px; }
+  .hc p { margin: 0 0 1rem; }
+  .hc .wrap { width: min(72rem, 100% - 2.5rem); margin-inline: auto; }
+
+  .hc .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 4rem; align-items: center; padding: 4.5rem 0 6rem; }
+  .hc .kicker { font: 500 0.8125rem/1.4 var(--mono); letter-spacing: 0.04em; color: var(--sodium); margin: 0 0 1.25rem; }
+  .hc h1 { font: 900 clamp(3.75rem, 9vw, 7.5rem)/0.86 var(--display); text-transform: uppercase; margin: 0 0 1.75rem; color: var(--moon); }
+  .hc h1 span { color: var(--sodium); display: block; }
+  .hc .lede { font-size: 1.25rem; max-width: 32rem; margin: 0 0 2rem; }
+  .hc .actions { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: center; }
+  .hc .btn { display: inline-block; padding: 0.85rem 1.4rem; background: var(--sodium); color: var(--night-deep); font-weight: 700; text-decoration: none; border-radius: 3px; }
+  .hc .btn:hover { background: #f7b961; }
+  .hc .textlink { color: var(--haze); text-underline-offset: 4px; }
+
+  .hc .sheet { margin: 0; background: var(--night-deep); border: 1px solid var(--rule); border-radius: 4px; padding: 1.75rem 1.75rem 1.5rem; font-family: var(--mono); font-size: 0.75rem; line-height: 1.5; box-shadow: 0 2.5rem 5rem -2rem rgba(0, 0, 0, 0.6); }
+  .hc .sheet__head { display: flex; justify-content: space-between; gap: 1rem; color: var(--haze); text-transform: uppercase; letter-spacing: 0.08em; padding-bottom: 1rem; border-bottom: 1px solid var(--rule); }
+  .hc .sheet__title { font: 700 1.875rem/1 var(--display); text-transform: uppercase; color: var(--moon); margin: 1.25rem 0 0.25rem; }
+  .hc .sheet__sub { color: var(--haze); margin: 0 0 1.25rem; }
+  .hc .credits { list-style: none; margin: 0; padding: 0; }
+  .hc .credit { display: grid; grid-template-columns: 1fr auto; gap: 0.15rem 1rem; padding: 0.8rem 0; border-top: 1px dashed var(--rule); }
+  .hc .credit__role { color: var(--haze); text-transform: uppercase; letter-spacing: 0.06em; }
+  .hc .credit__who { color: var(--moon); font-size: 0.875rem; font-family: var(--body); }
+  .hc .credit__split { grid-row: span 2; align-self: center; font-size: 1.125rem; color: var(--moon); }
+  .hc .credit__sig { grid-column: 1 / -1; color: var(--sodium); overflow-wrap: anywhere; }
+  .hc .credit__sig::before { content: "signed "; color: var(--haze); }
+  .hc .sheet__foot { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--haze); }
+  .hc .verified { color: var(--moon); }
+  .hc .verified::before { content: "✓ "; color: var(--sodium); }
+  .hc .sheet__note { margin: 0.75rem 0 0; color: var(--haze); font-family: var(--body); font-size: 0.8125rem; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hc .credit, .hc .sheet__foot { animation: hc-ink 0.5s ease-out both; }
+    .hc .credit:nth-child(1) { animation-delay: 0.25s; }
+    .hc .credit:nth-child(2) { animation-delay: 0.55s; }
+    .hc .credit:nth-child(3) { animation-delay: 0.85s; }
+    .hc .sheet__foot { animation-delay: 1.3s; }
+    .hc .credit__sig { animation: hc-sign 0.7s steps(24, end) both; animation-delay: inherit; }
+    @keyframes hc-ink { from { opacity: 0; transform: translateY(6px); } }
+    @keyframes hc-sign { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+  }
+
+  .hc section { padding: 5rem 0; border-top: 1px solid var(--rule); }
+  .hc .section-grid { display: grid; grid-template-columns: 18rem 1fr; gap: 3rem; }
+  .hc h2 { font: 700 2.5rem/0.95 var(--display); text-transform: uppercase; margin: 0; color: var(--moon); }
+  .hc h3 { font: 700 1.0625rem/1.3 var(--body); margin: 0 0 0.35rem; color: var(--moon); }
+  .hc .muted { color: var(--haze); }
+  .hc .built { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2.25rem 3rem; }
+  .hc .built p, .hc .flow p { color: var(--haze); margin: 0; }
+  .hc .flow { list-style: none; margin: 0; padding: 0; counter-reset: hc-step; }
+  .hc .flow li { counter-increment: hc-step; display: grid; grid-template-columns: 3rem 1fr; gap: 1rem; padding: 1.25rem 0; border-bottom: 1px solid var(--rule); }
+  .hc .flow li:first-child { padding-top: 0; }
+  .hc .flow li::before { content: counter(hc-step); font: 900 2.25rem/1 var(--display); color: var(--sodium); }
+  .hc .facts { list-style: none; margin: 0 0 1.5rem; padding: 0; }
+  .hc .facts li { padding: 0.6rem 0 0.6rem 1.5rem; position: relative; }
+  .hc .facts li::before { content: ""; position: absolute; left: 0; top: 1.05rem; width: 0.6rem; height: 2px; background: var(--sodium); }
+  .hc .status { border-left: 3px solid var(--brick); padding: 0.25rem 0 0.25rem 1.25rem; max-width: 46rem; }
+  .hc .contact { padding: 3rem 0 4rem; border-top: 1px solid var(--rule); color: var(--haze); }
+  .hc .contact ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+  .hc .contact a { color: var(--moon); text-underline-offset: 4px; }
+
+  @media (max-width: 860px) {
+    .hc .hero { grid-template-columns: 1fr; gap: 3rem; padding: 2.5rem 0 4rem; }
+    .hc .section-grid { grid-template-columns: 1fr; gap: 1.75rem; }
+    .hc .built { grid-template-columns: 1fr; gap: 1.5rem; }
+    .hc section { padding: 3.5rem 0; }
+  }
+  @media (max-width: 520px) { .hc .sheet { padding: 1.25rem; } }
+</style>
+
+<div class="hc">
+  <div class="wrap">
+    <header class="hero">
+      <div>
+        <p class="kicker">Witching Hour Music · hOUR Chain</p>
+        <h1>Every credit, <span>signed.</span></h1>
+        <p class="lede">hOUR Chain records who made a work, how its rights and splits change, and whether everyone got paid. Collaborators approve their credits with a passkey on Solana, payments settle on Base, and every record is signed with post-quantum keys.</p>
+        <div class="actions">
+          <a class="btn" href="https://github.com/witchinghourartcollective/hOUR-Chain">Read the protocol on GitHub</a>
+          <a class="textlink" href="https://witchinghourmac.com">Visit the collective →</a>
+        </div>
+      </div>
+      <figure class="sheet" aria-label="Example signed credits record">
+        <div class="sheet__head"><span>Rights record</span><span>Example</span></div>
+        <p class="sheet__title">Untitled release</p>
+        <p class="sheet__sub">Consent on Solana · payout on Base · split v1</p>
+        <ol class="credits">
+          <li class="credit"><span class="credit__role">Composition</span><span class="credit__split">50%</span><span class="credit__who">Contributor A</span><span class="credit__sig">ML-DSA-65 · 3f9c…a71e</span></li>
+          <li class="credit"><span class="credit__role">Production</span><span class="credit__split">30%</span><span class="credit__who">Contributor B</span><span class="credit__sig">ML-DSA-65 · 8b02…4cd9</span></li>
+          <li class="credit"><span class="credit__role">Cover art</span><span class="credit__split">20%</span><span class="credit__who">Contributor C · no wallet yet</span><span class="credit__sig">ML-DSA-65 · e517…09b3</span></li>
+        </ol>
+        <div class="sheet__foot"><span>Splits total 100%</span><span class="verified">All signatures verified</span></div>
+        <figcaption class="sheet__note">An illustration of the record format, not a real release.</figcaption>
+      </figure>
+    </header>
+  </div>
+
+  <section>
+    <div class="wrap section-grid">
+      <h2>What's built today</h2>
+      <div class="built">
+        <div><h3>Post-quantum signing</h3><p>A reference implementation signs and verifies records with ML-DSA-65 and SLH-DSA-SHA2-128s, the NIST post-quantum standards. Unknown or downgraded signature types are rejected.</p></div>
+        <div><h3>Passkey consent on Solana</h3><p>A Solana program verifies a collaborator's Face ID, Touch ID, or security-key approval onchain, with no wallet or seed phrase. Tested end to end; not yet deployed.</p></div>
+        <div><h3>A live ecosystem to serve</h3><p>The Witching Hour web app, a Lightning node with open channels, and an onchain agent running payment workflows on Base.</p></div>
+        <div><h3>Evidence bundles for Filecoin</h3><p>A deterministic manifest and verifier for the files and credits behind a work. Archiving bundles on Filecoin is the next milestone.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap section-grid">
+      <h2>How a release moves</h2>
+      <ol class="flow">
+        <li><div><h3>Register the work</h3><p>Title, recording, release, ISRC, UPC, or ISWC identifiers, and the evidence behind the credits, archived on Filecoin.</p></div></li>
+        <li><div><h3>Agree the splits</h3><p>Each contributor approves their role and percentage with a passkey, recorded on Solana. No crypto wallet needed. Every category has to total exactly 100%.</p></div></li>
+        <li><div><h3>Sign the record</h3><p>Each change is a signed, timestamped event that points to its evidence and to the event before it.</p></div></li>
+        <li><div><h3>Settle the payment</h3><p>A signed instruction says who gets paid and how much, in USDC on Base. Nothing moves without explicit approval.</p></div></li>
+        <li><div><h3>Keep the receipt</h3><p>The Base receipt is attested back on Solana next to the approvals, so anyone can check that the payment matched the agreed splits.</p></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap section-grid">
+      <h2>First release pilot</h2>
+      <div>
+        <p>We are running hOUR Chain end to end on one real Witching Hour release first: a music, visual-art, or performance release with its actual contributors.</p>
+        <ul class="facts">
+          <li>Credits, consent, and splits recorded for every contributor</li>
+          <li>Passkey approvals on Solana devnet, a settlement receipt on Base testnet, and evidence on Filecoin's test network</li>
+          <li>A statement each contributor can read</li>
+          <li>No live funds move while the pilot is being validated</li>
+        </ul>
+        <p class="status muted"><strong>Status: pre-alpha.</strong> hOUR Chain is a protocol in development, not a live blockchain. Nothing is deployed to mainnet, and there is no token sale.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap contact">
+    <ul>
+      <li>Email <a href="mailto:mirrorz@mirrorizm.com">mirrorz@mirrorizm.com</a></li>
+      <li>Collective <a href="https://witchinghourmac.com">witchinghourmac.com</a></li>
+      <li>Protocol <a href="https://github.com/witchinghourartcollective/hOUR-Chain">github.com/witchinghourartcollective/hOUR-Chain</a></li>
+      <li>Solana <a href="https://github.com/witchinghourartcollective/hour-chain-solana">hour-chain-solana</a> · Filecoin <a href="https://github.com/witchinghourartcollective/hour-chain-filecoin">hour-chain-filecoin</a></li>
+      <li>hOUR Chain is built by Witching Hour Music.</li>
+    </ul>
+  </div>
+</div>

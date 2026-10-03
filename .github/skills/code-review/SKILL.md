@@ -5,8 +5,10 @@ description: Review changes to this repository. Use for any pull request or diff
 
 # Reviewing hOUR Chain
 
-This is a protocol specification, not an implementation. There is no build, no
-test runner and no CI. The artifacts are `SPEC.md`, `THREAT-MODEL.md`,
+This is primarily a protocol specification. The only implementation is the PQC
+signing-profile reference in `packages/pqc-profile/`, tested by `npm test`; CI
+runs those tests and the conformance check on every push and pull request. The
+artifacts are `SPEC.md`, `THREAT-MODEL.md`,
 `TRUST-MODEL.md`, the ADRs, `specs/event-envelope.schema.json`, and the cost and
 funding documents. A defect here is a requirement that contradicts another
 requirement, or a number that cannot be evidenced — both of which propagate into
