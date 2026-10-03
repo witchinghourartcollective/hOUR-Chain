@@ -6,7 +6,7 @@ Reduce verified infrastructure waste immediately, preserve essential services, f
 
 ## Current funding position
 
-hOUR Chain is being specified and built by a solo founder, self-funded out of pocket at an owner-estimated **US$569+/month** across cloud infrastructure and AI tooling. The figure is an unreconciled operating floor based on memory, not a pilot-at-scale budget. The previously unattributed US$60+ is owner-attributed to GitHub Enterprise/Business/Copilot and still requires invoice-level separation. The US$24 increase from the earlier US$545 floor is the now-running DigitalOcean Lightning host. Spend is constrained by personal cash flow rather than technical readiness or lack of a plan.
+hOUR Chain is being specified and built by a solo founder, self-funded out of pocket at an owner-estimated **US$598+/month** across cloud infrastructure and AI tooling. The figure is an unreconciled operating floor based on memory, not a pilot-at-scale budget. The previously unattributed US$60+ is owner-attributed to GitHub Enterprise/Business/Copilot and still requires invoice-level separation. The US$24 increase from the earlier US$545 floor is the now-running DigitalOcean Lightning host; a further ~US$29 is GitLab Premium (owner-approved 2026-10-03). Spend is constrained by personal cash flow rather than technical readiness or lack of a plan.
 
 Cloud credits would directly convert into shipped protocol work by extending infrastructure runway and freeing founder cash for implementation, security, and pilot delivery.
 
@@ -69,7 +69,7 @@ Do not present the superseded US$2,870/month scenario, invented AWS resources, d
 
 Use the following structure:
 
-- **Current:** approximately US$569+/month, owner-reported and pending billing reconciliation; GitHub's US$60+ line and the US$24 DigitalOcean Lightning host are now attributed but still need invoices.
+- **Current:** approximately US$598+/month, owner-reported and pending billing reconciliation; GitHub's US$60+ line and the US$24 DigitalOcean Lightning host are now attributed but still need invoices.
 - **Immediate optimization:** determine whether the two GCP full nodes can be resized, replaced, or moved safely.
 - **Credits request:** enough capacity to preserve essential infrastructure and ship a measured pilot without diverting scarce founder cash.
 - **Scale request:** model separately from the current floor using low/base/high assumptions for creators, works, protocol events, settlements, storage, RPC traffic, availability, security and support. Final sizing follows 30 days of pilot utilization and unit-cost data.

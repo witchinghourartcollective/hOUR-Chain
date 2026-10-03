@@ -52,7 +52,7 @@ under "Evidence gates".
 | Evidence archive | Cloud Storage | Durable, versioned store for evidence references | Pilot evidence bundle stored with an integrity hash recorded in an event |
 | Chain analytics | BigQuery public blockchain datasets | Settlement-receipt reconciliation without running archive nodes | Receipt reconciliation query for pilot settlements |
 
-A Start-tier grant of up to US$2,000 should cover the first two to three rows for the pilot period. The application should say so, rather than presenting US$2,000 as a fix for the full US$569+/month floor.
+A Start-tier grant of up to US$2,000 should cover the first two to three rows for the pilot period. The application should say so, rather than presenting US$2,000 as a fix for the full US$598+/month floor.
 
 Credits are the funding mechanism here, not a supplement. Existing paid accounts (GitHub, the `witchinghourmac.com` billing) can't be funded right now; GitHub Actions CI in this repo won't run until GitHub billing is restored. Don't link CI status badges or Actions results in the application.
 
@@ -97,7 +97,7 @@ blockchain-foundation grant, which makes the company eligible for the Scale tier
 (up to US$200,000); re-apply then.
 
 **Funding status.** Self-funded by a solo founder at approximately
-US$569+/month (owner-reported, pending billing reconciliation). Planning to
+US$598+/month (owner-reported, pending billing reconciliation). Planning to
 seek pre-seed funding after the first-release pilot produces 30 days of measured
 usage.
 
