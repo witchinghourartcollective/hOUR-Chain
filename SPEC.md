@@ -78,7 +78,7 @@ See `docs/ADR-0002-post-quantum-native-cryptography.md`.
 
 ## Phase 1 settlement
 
-Base is canonical for EVM records and the payments/settlement network. Solana is the primary chain for approvals/consent and attestations (ADR-0004; implementation in progress in `hour-chain-solana`). Lightning is a planned adapter network. Cross-chain bridges are not protocol dependencies in Phase 1. Because these settlement rails are not themselves fully post-quantum, Phase 1 MUST distinguish hOUR-signed PQC records from the quantum security of an external settlement receipt.
+Per ADR-0005 (superseding ADR-0004), hOUR Chain is a Cosmos SDK L1 with EVM compatibility (`cosmos/evm`) and IBC; only a devnet scaffold exists (`chain/`). The token model and validator model are open decisions. Chainlink CCIP does not support Cosmos/IBC chains; the CCIP route (onboarding HBC as an EVM chain, or via Base) is open. Lightning is a planned adapter network. Cosmos/CometBFT validator keys (Ed25519) and EVM account keys (secp256k1) are not post-quantum, so the chain MUST NOT be described as end-to-end post-quantum, and hOUR-signed PQC records MUST be distinguished from the quantum security of chain-level signatures and any external settlement receipt.
 
 ## State model
 
