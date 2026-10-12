@@ -1,6 +1,6 @@
 # ADR-0004: Solana for consent and attestations, Base for payments
 
-Status: Accepted (2026-10-02)
+Status: Superseded by [ADR-0005](ADR-0005-cosmos-evm-l1.md) (2026-10-12); originally accepted 2026-10-02
 Amends: [ADR-0001](ADR-0001-phase-1-settlement.md) (the role of Solana only)
 
 ## Context
