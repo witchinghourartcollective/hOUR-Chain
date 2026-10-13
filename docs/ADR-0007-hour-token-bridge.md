@@ -53,9 +53,39 @@ hOUR Chain's EVM RPC as a deployment network, not a different codebase.
   governance). This is a known centralization point, acceptable at the
   current single-founder stage. Must be revisited (e.g. moved to a real
   multisig/Safe) before meaningful external value is at risk.
-- No relayer automation is implemented yet — signers currently confirm
-  manually by watching `Locked` / `BurnedForRelease` events. An automated
-  watcher (matching the pattern of existing off-machine watchdogs) is a
-  follow-up, not required for the contracts to be correct.
-- Neither contract is deployed yet. Deployment to Base mainnet costs real
-  gas and must not happen without explicit, per-instance approval.
+- Relayer automation (`npm run bridge:relay` in `witching-hour-token`) is
+  implemented, but deliberately auto-confirms with only one signer. The
+  second confirmation needed to reach threshold is a manual command
+  (`bridge:confirm`) run with a different signer, so a compromised or
+  buggy relayer can never clear the threshold alone. All three signers
+  currently sit under one CDP API key, so this manual step is the only
+  real control against single-point compromise today.
+- The full lock → relay → mint cycle was proved end-to-end for free on
+  2026-10-13, using Base Sepolia (not mainnet) and the real hOUR Chain
+  devnet. `WrappedHour` is deployed to the devnet at
+  `0x3D641a2791533B4A0000345eA8d509d01E1ec301`. Neither contract is
+  deployed to Base mainnet; that still requires explicit, per-instance
+  approval since it costs real gas.
+- **hOUR Chain's `eth_estimateGas` under-estimates badly** — observed
+  returning ~24k gas for `confirmMint`, barely above the 21k base tx
+  cost, causing a silent out-of-gas revert that still returns a tx hash
+  (looks successful until you check the receipt). Any EVM write against
+  this chain should pass an explicit `gas` limit rather than trust
+  auto-estimation, and should always check `receipt.status`, not just
+  that a hash came back. This is a devnet-wide issue, not specific to
+  the bridge contracts.
+- **CDP's `sign transaction` endpoint can't sign a contract-CREATE
+  transaction** (empty `to`); it only signs calls to an existing
+  address. A CDP-signed deployment must go through a regular `to`-
+  targeted call, e.g. the standard CREATE2 deployer proxy singleton
+  (`0x4e59b44847b379578588920cA78FbF26c0B4956C`, deployed on Base,
+  Base Sepolia, and most EVM chains).
+- The devnet node (`whm-lnd-cloud`) went RPC-unresponsive after ~6h of
+  continuous empty-block production — host memory crept up to hourd's
+  cgroup cap (`MemoryHigh=640M`/`MemoryMax=768M`) and swap kept climbing.
+  Restarting `hourd.service` recovered it with no state loss; LND/
+  bitcoind on the same host were unaffected. Worth monitoring if this
+  recurs — a single-validator devnet producing a block every ~2s with
+  zero transactions has no reason to grow this fast, so the service may
+  need a periodic restart or a tuned block time until investigated
+  further.
