@@ -66,12 +66,22 @@ hOUR Chain's EVM RPC as a deployment network, not a different codebase.
   `0x3D641a2791533B4A0000345eA8d509d01E1ec301`. Neither contract is
   deployed to Base mainnet; that still requires explicit, per-instance
   approval since it costs real gas.
-- **hOUR Chain's `eth_estimateGas` under-estimates badly** — observed
-  returning ~24k gas for `confirmMint`, barely above the 21k base tx
-  cost, causing a silent out-of-gas revert that still returns a tx hash
-  (looks successful until you check the receipt). Any EVM write against
-  this chain should pass an explicit `gas` limit rather than trust
-  auto-estimation, and should always check `receipt.status`, not just
+- **Root-caused the gas bug, 2026-10-13: it's `eth_fillTransaction`, not
+  `eth_estimateGas` itself.** Plain `eth_estimateGas` (with `from` set)
+  returns a correct value (~121k for `confirmMint`). But any real signed
+  write — via viem, or anything else building on a local account — calls
+  `eth_fillTransaction` to fill gas/nonce/fee defaults, and that handler
+  (`SetTxDefaults` in `cosmos/evm` v0.7.0's `rpc/backend/call_tx.go`,
+  ~line 282) hardcodes `blockNr = 0` for its internal gas estimate —
+  simulating against **genesis**, not current state. Since `WrappedHour`
+  didn't exist at genesis, the simulated call hits an address with no
+  code and "succeeds" almost for free (~24k gas), instead of running
+  `confirmMint`'s actual logic. This is a genuine upstream `cosmos/evm`
+  bug, worth reporting against github.com/cosmos/evm — not fixed here.
+  The result: a silent out-of-gas revert that still returns a tx hash
+  and looks successful until you check the receipt. Any EVM write
+  against this chain should pass an explicit `gas` limit rather than
+  trust auto-estimation, and should always check `receipt.status`, not just
   that a hash came back. This is a devnet-wide issue, not specific to
   the bridge contracts.
 - **CDP's `sign transaction` endpoint can't sign a contract-CREATE
