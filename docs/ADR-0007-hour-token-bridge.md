@@ -88,7 +88,9 @@ hOUR Chain's EVM RPC as a deployment network, not a different codebase.
   didn't exist at genesis, the simulated call hits an address with no
   code and "succeeds" almost for free (~24k gas), instead of running
   `confirmMint`'s actual logic. This is a genuine upstream `cosmos/evm`
-  bug, worth reporting against github.com/cosmos/evm — not fixed here.
+  bug. Filed as [cosmos/evm#1322](https://github.com/cosmos/evm/issues/1322)
+  (2026-10-13) — not fixed here, this repo's mitigation (explicit gas +
+  receipt checks) stands regardless of upstream's response.
   The result: a silent out-of-gas revert that still returns a tx hash
   and looks successful until you check the receipt. Any EVM write
   against this chain should pass an explicit `gas` limit rather than
