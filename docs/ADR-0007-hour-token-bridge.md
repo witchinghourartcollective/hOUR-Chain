@@ -63,9 +63,20 @@ hOUR Chain's EVM RPC as a deployment network, not a different codebase.
 - The full lock → relay → mint cycle was proved end-to-end for free on
   2026-10-13, using Base Sepolia (not mainnet) and the real hOUR Chain
   devnet. `WrappedHour` is deployed to the devnet at
-  `0x3D641a2791533B4A0000345eA8d509d01E1ec301`. Neither contract is
-  deployed to Base mainnet; that still requires explicit, per-instance
-  approval since it costs real gas.
+  `0x3D641a2791533B4A0000345eA8d509d01E1ec301`.
+- **`HourBridgeVault` is live on Base mainnet**, deployed 2026-10-13 at
+  `0x2AcB172E1D3335B059a438Ea9060565aFcE76140` (tx
+  [0x03b94c00...](https://basescan.org/tx/0x03b94c009c5b69179e919dd5fadbae2c48381f7ace99defc79aeef19d6897b46)),
+  signed by `treasury` (CDP-managed) after Fletcher explicitly approved
+  the funding source and amount. Verified on-chain: `threshold=2`,
+  `hourToken` points at the real HOUR token, signers correctly
+  registered. Cost ~0.0000092 ETH. `HourToken` itself is untouched.
+  **Outstanding:** `setFeeExempt(vault, true)` still needs to be called
+  by the token owner (`0x52864a2E...`), which is not a CDP-managed key —
+  a manual follow-up, not yet done. Until that's called, locking real
+  HOUR through this vault would incur the normal 7% transfer fee (and
+  revert pre-launch, since trading is still disabled) rather than
+  moving 1:1.
 - **Root-caused the gas bug, 2026-10-13: it's `eth_fillTransaction`, not
   `eth_estimateGas` itself.** Plain `eth_estimateGas` (with `from` set)
   returns a correct value (~121k for `confirmMint`). But any real signed
