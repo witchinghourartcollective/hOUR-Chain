@@ -73,6 +73,8 @@ npm run check:conformance  # SPEC.md and the envelope schema agree
 - [ADR-0006](docs/ADR-0006-clique-tee-oracle-clob-loyalty.md) — Clique TEE
   network for TLS oracles, off-chain CLOB settlement, loyalty, and royalty
   distribution (additive to ADR-0001/ADR-0004/ADR-0005).
+- [ADR-0007](docs/ADR-0007-hour-token-bridge.md) — multisig-gated lock/mint
+  bridge for HOUR between Base and hOUR Chain (additive to ADR-0001/ADR-0005).
 
 ## Phase 0
 
