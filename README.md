@@ -70,6 +70,9 @@ npm run check:conformance  # SPEC.md and the envelope schema agree
 - [ADR-0003](docs/ADR-0003-event-envelope-boundary.md) — boundary between this
   envelope and the `witching-hour-platform` envelope, and where Lightning
   telemetry versus Lightning settlement each belong.
+- [ADR-0006](docs/ADR-0006-clique-tee-oracle-clob-loyalty.md) — Clique TEE
+  network for TLS oracles, off-chain CLOB settlement, loyalty, and royalty
+  distribution (additive to ADR-0001/ADR-0004/ADR-0005).
 
 ## Phase 0
 
