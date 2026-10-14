@@ -80,13 +80,13 @@ hOUR Chain's EVM RPC as a deployment network, not a different codebase.
   signed by `treasury` (CDP-managed) after Fletcher explicitly approved
   the funding source and amount. Verified on-chain: `threshold=2`,
   `hourToken` points at the real HOUR token, signers correctly
-  registered. Cost ~0.0000092 ETH. `HourToken` itself is untouched.
-  **Outstanding:** `setFeeExempt(vault, true)` still needs to be called
-  by the token owner (`0x52864a2E...`), which is not a CDP-managed key —
-  a manual follow-up, not yet done. Until that's called, locking real
-  HOUR through this vault would incur the normal 7% transfer fee (and
-  revert pre-launch, since trading is still disabled) rather than
-  moving 1:1.
+  registered. Cost ~0.0000092 ETH. `HourToken`'s code is untouched.
+- **`setFeeExempt(vault, true)` called 2026-10-14**
+  (tx [0x7c22c63a...](https://basescan.org/tx/0x7c22c63a48528088b43b48977cd439973002571b25c3d9f95b4ebd23d2fd9a7a)),
+  using the `PRIVATE_KEY` already present in `witching-hour-token/.env`
+  (confirmed to derive the token owner address, `0x52864a2E...`, before
+  use). Verified on-chain: `isFeeExempt(vault) == true`. The vault can
+  now lock/release real HOUR 1:1, without the normal 7% transfer fee.
 - **Root-caused the gas bug, 2026-10-13: it's `eth_fillTransaction`, not
   `eth_estimateGas` itself.** Plain `eth_estimateGas` (with `from` set)
   returns a correct value (~121k for `confirmMint`). But any real signed
