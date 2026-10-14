@@ -57,9 +57,19 @@ hOUR Chain's EVM RPC as a deployment network, not a different codebase.
   implemented, but deliberately auto-confirms with only one signer. The
   second confirmation needed to reach threshold is a manual command
   (`bridge:confirm`) run with a different signer, so a compromised or
-  buggy relayer can never clear the threshold alone. All three signers
-  currently sit under one CDP API key, so this manual step is the only
-  real control against single-point compromise today.
+  buggy relayer can never clear the threshold alone.
+- **Signer-3's custody is now independent of CDP**, as of 2026-10-14.
+  `scripts/relayer/export-signer-key.mjs` exported it (RSA-4096/OAEP-
+  SHA256, same scheme as the CDP SDK's own export flow, run by Fletcher
+  directly since key export is blocked for an agent); the key was
+  verified (via `scripts/relayer/verify-local-key.mjs`) to correctly
+  derive `0x1e3099CdACFC8ecF0Dda292436bf4e64A71Fa273` before the local
+  copy was deleted, and the key now lives in Bitwarden. Importing it
+  into a mobile wallet app (Trust Wallet, MetaMask) did not work after
+  several attempts and was deliberately not pursued further — a wallet
+  app isn't required: `manual-confirm.mjs --local-key-file=<path>`
+  signs directly from a key file pulled out of Bitwarden when needed.
+  Signers 1 and 2 remain under the original shared CDP API key.
 - The full lock → relay → mint cycle was proved end-to-end for free on
   2026-10-13, using Base Sepolia (not mainnet) and the real hOUR Chain
   devnet. `WrappedHour` is deployed to the devnet at
