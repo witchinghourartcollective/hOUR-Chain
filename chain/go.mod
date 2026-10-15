@@ -375,4 +375,9 @@ replace (
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	// use btree fork for bstm
 	github.com/tidwall/btree => github.com/cosmos/btree v0.0.0-20250924232609-2c6195d95951
+	// Pinned to our backport of upstream #1220 (merged to main, never backported to
+	// release/v0.7.x -- see cosmos/evm#1322, cosmos/evm#1325). v0.7.0/v0.7.1/v0.7.2/v0.7.3
+	// all estimate gas against genesis in SetTxDefaults, causing silent out-of-gas reverts
+	// on any contract call. Drop this replace once #1325 merges and a v0.7.4+ tag ships it.
+	github.com/cosmos/evm => github.com/witchinghourartcollective/evm v1.0.0-rc2.0.20261015213201-071b0a73b67e
 )
