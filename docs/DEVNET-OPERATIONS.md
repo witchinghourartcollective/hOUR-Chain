@@ -25,6 +25,16 @@ The saved application state was not reinitialized. Empty blocks were being
 committed about once per second with no peers or transactions, so the devnet
 was consuming resources without useful test activity.
 
+`hourd-soak-sample.timer` now records a read-only sample every five minutes
+in the system journal: service state, restart count, peak memory, CometBFT
+height and peer count, and EVM chain ID. Inspect samples with
+`journalctl -u hourd-soak-sample.service --since '24 hours ago'`. The first
+sample after the 2026-10-19 21:34 UTC restart was recorded at 2026-10-20
+01:09 UTC: active, zero restarts, 494026752-byte memory peak, height 72351,
+zero peers, and chain ID `0x2328`. This is an initial observation, not a
+completed 24-hour soak; the first full window ends no earlier than 2026-10-20
+21:34 UTC if the service remains continuously active.
+
 ## IBC and public-testnet readiness
 
 `go test ./... -run TestICS20TransferAndTimeoutRefund` exercises the hOUR app
