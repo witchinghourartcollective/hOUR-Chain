@@ -1,0 +1,12 @@
+[Unit]
+Description=Collect hOUR devnet soak evidence every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=hourd-soak-sample.service
+
+[Install]
+WantedBy=timers.target

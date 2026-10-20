@@ -1,0 +1,15 @@
+[Unit]
+Description=Record one read-only hOUR devnet soak sample
+After=hourd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/hourd-soak-sample.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=100.76.58.84
+IPAddressAllow=127.0.0.1
