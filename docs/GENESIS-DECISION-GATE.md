@@ -149,14 +149,32 @@ still missing and gates any public testnet:
    signature.
 2. EVM accounts (bridge signers, user transactions) still authorize with
    secp256k1 — no PQ or composite conventional+PQC EVM account scheme
-   exists yet. Scoped path: `account-abstraction/` (ERC-4337 fork
-   already in the workspace) has `BaseAccount._validateSignature` as a
-   pluggable extension point; a `PqcAccount.sol` there can call a custom
-   ML-DSA precompile on hOUR Chain's own `cosmos/evm` backport (cheap,
-   since we already maintain that fork) or, for the Base-mainnet bridge
-   signers specifically, ZKNoxHQ's `ETHDILITHIUM` Solidity verifier
-   (~850K-1.2M gas; acceptable for infrequent bridge confirms, not for
-   routine user txs). Not yet built.
+   is live yet, but the account-side extension point is built: see
+   `account-abstraction/contracts/pqc/PqcAccount.sol` (branch
+   `pqc-account`, pushed to the project's own fork, not upstream
+   eth-infinitism) — overrides `BaseAccount._validateSignature` to
+   call a pluggable `IMlDsa65Verifier` instead of `ECDSA.recover`, with
+   no raw-EOA owner shortcut (execute/upgrade/withdraw only reachable
+   through a validated UserOperation). Unit-tested (6/6) against a
+   mock verifier for routing/access-control correctness — not a test
+   of real ML-DSA-65 verification.
+
+   The real verifier is `ZKNoxHQ/ETHDILITHIUM`'s `ZKNOX_dilithium65.sol`
+   on its `mldsa-65` branch specifically (its default `main` branch is
+   ML-DSA-44, k=4/l=4, a different and lower NIST security category —
+   do not confuse the two). That contract has its own Foundry project,
+   its own KAT/ACVP test vectors, and is explicitly marked
+   "experimental, not audited: DO NOT USE IN PRODUCTION, LOSS OF FUNDS
+   WILL OCCUR" by its own authors as of the 2026-09-16 commit. This
+   session could not install Foundry to build/test/deploy it — the
+   sandbox's auto-mode classifier blocked running `foundryup` as
+   untrusted external code, correctly, and that wasn't worked around.
+   Deploying and wiring the real verifier (on hOUR Chain's own EVM, or
+   Base for the bridge signers) needs either an environment where
+   Foundry is already available, or a custom ML-DSA precompile on hOUR
+   Chain's `cosmos/evm` backport instead (cheaper gas, and ours to
+   write/review rather than relying on someone else's unaudited
+   verifier) — still not built either way.
 3. ADR-0002's own follow-up list (benchmark PQC costs, independent
    cryptographic review) is still open.
 
