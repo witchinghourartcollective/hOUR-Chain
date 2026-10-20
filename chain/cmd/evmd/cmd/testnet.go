@@ -60,6 +60,7 @@ var (
 	flagsUseDocker         = "use-docker"
 	flagEnableLogging      = "enable-logging"
 	flagGRPCAddress        = "grpc.address"
+	flagJSONRPCAddress     = "jsonrpc.address"
 	flagRPCAddress         = "rpc.address"
 	flagAPIAddress         = "api.address"
 	flagPrintMnemonic      = "print-mnemonic"
@@ -107,6 +108,7 @@ type startArgs struct {
 	chainID         string
 	enableLogging   bool
 	grpcAddress     string
+	jsonRPCAddress  string
 	minGasPrices    string
 	numValidators   int
 	outputDir       string
@@ -116,8 +118,8 @@ type startArgs struct {
 	validatorPowers []int64
 }
 
-func addTestnetFlagsToCmd(cmd *cobra.Command) {
-	cmd.Flags().Int(flagNumValidators, 4, "Number of validators to initialize the testnet with")
+func addTestnetFlagsToCmd(cmd *cobra.Command, defaultValidators int) {
+	cmd.Flags().Int(flagNumValidators, defaultValidators, "Number of validators to initialize the testnet with")
 	cmd.Flags().StringP(flagOutputDir, "o", "./.testnets", "Directory to store initialization data for the testnet")
 	cmd.Flags().String(flags.FlagChainID, "", "genesis file chain-id, if left blank will be randomly created")
 	cmd.Flags().String(server.FlagMinGasPrices, fmt.Sprintf("0.000006%s", sdk.DefaultBondDenom), "Minimum gas prices to accept for transactions; All fees in a tx must meet this minimum (e.g. 0.01photino,0.001stake)")
@@ -214,7 +216,7 @@ Example:
 		},
 	}
 
-	addTestnetFlagsToCmd(cmd)
+	addTestnetFlagsToCmd(cmd, 4)
 	cmd.Flags().Duration(flagCommitTimeout, 5*time.Second, "Time to wait after a block commit before starting on the new height")
 	cmd.Flags().Bool(flagSingleHost, false, "Cluster runs on a single host machine with different ports")
 	cmd.Flags().String(flagNodeDirPrefix, "node", "Prefix the directory name for each node with (node results in node0, node1, ...)")
@@ -232,8 +234,8 @@ Example:
 func testnetStartCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
-		Short: "Launch an in-process multi-validator testnet",
-		Long: `testnet will launch an in-process multi-validator testnet,
+		Short: "Launch a one-validator in-process testnet",
+		Long: `testnet will launch an in-process one-validator testnet,
 and generate "v" directories, populated with necessary validator configuration files
 (private validator, genesis, config, etc.).
 
@@ -251,6 +253,7 @@ Example:
 			args.rpcAddress, _ = cmd.Flags().GetString(flagRPCAddress)
 			args.apiAddress, _ = cmd.Flags().GetString(flagAPIAddress)
 			args.grpcAddress, _ = cmd.Flags().GetString(flagGRPCAddress)
+			args.jsonRPCAddress, _ = cmd.Flags().GetString(flagJSONRPCAddress)
 			args.printMnemonic, _ = cmd.Flags().GetBool(flagPrintMnemonic)
 
 			validatorPowers, _ := cmd.Flags().GetIntSlice(flagValidatorPowers)
@@ -264,11 +267,12 @@ Example:
 		},
 	}
 
-	addTestnetFlagsToCmd(cmd)
+	addTestnetFlagsToCmd(cmd, 1)
 	cmd.Flags().Bool(flagEnableLogging, false, "Enable INFO logging of CometBFT validator nodes")
 	cmd.Flags().String(flagRPCAddress, "tcp://127.0.0.1:26657", "the local RPC address to listen on")
 	cmd.Flags().String(flagAPIAddress, "tcp://127.0.0.1:1317", "the local REST API address to listen on")
 	cmd.Flags().String(flagGRPCAddress, "127.0.0.1:9090", "the local gRPC server address to listen on")
+	cmd.Flags().String(flagJSONRPCAddress, "127.0.0.1:8545", "the local EVM JSON-RPC address to listen on")
 	cmd.Flags().Bool(flagPrintMnemonic, false, "print the first validator mnemonic to stdout (sensitive; local testing only)")
 	return cmd
 }
@@ -328,7 +332,7 @@ func initTestnetFiles(
 	appConfig.Telemetry.EnableHostnameLabel = false
 	appConfig.Telemetry.GlobalLabels = [][]string{{"chain_id", args.chainID}}
 	evm := cosmosevmserverconfig.DefaultEVMConfig()
-	evm.EVMChainID = evmtypes.DefaultEVMChainID
+	evm.EVMChainID = config.DefaultEVMChainID
 	evmCfg := config.EVMAppConfig{
 		Config:  *appConfig,
 		EVM:     *evm,
@@ -724,13 +728,14 @@ func writeSecretFile(name string, dir string, contents []byte) error {
 
 // startTestnet starts an in-process testnet
 func startTestnet(cmd *cobra.Command, args startArgs) error {
-	networkConfig := customnetwork.DefaultConfig()
-
-	// Default networkConfig.ChainID is random, and we should only override it if chainID provided
-	// is non-empty
-	if args.chainID != "" {
-		networkConfig.ChainID = args.chainID
+	if args.numValidators != 1 {
+		return fmt.Errorf("in-process hOUR testnet supports one validator because EVM chain configuration is process-global; use testnet init-files for multiple validators")
 	}
+	chainID := args.chainID
+	if chainID == "" {
+		chainID = fmt.Sprintf("hourd-local-%d", time.Now().UnixNano())
+	}
+	networkConfig := customnetwork.NewConfig(chainID, config.DefaultEVMChainID)
 	networkConfig.SigningAlgo = args.algo
 	networkConfig.MinGasPrices = args.minGasPrices
 	networkConfig.NumValidators = args.numValidators
@@ -738,6 +743,7 @@ func startTestnet(cmd *cobra.Command, args startArgs) error {
 	networkConfig.RPCAddress = args.rpcAddress
 	networkConfig.APIAddress = args.apiAddress
 	networkConfig.GRPCAddress = args.grpcAddress
+	networkConfig.JSONRPCAddress = args.jsonRPCAddress
 	networkConfig.PrintMnemonic = args.printMnemonic
 
 	// Convert validator powers to bonded tokens

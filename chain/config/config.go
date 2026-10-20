@@ -6,6 +6,11 @@ import (
 	cosmosevmserverconfig "github.com/cosmos/evm/server/config"
 )
 
+const (
+	DefaultEVMChainID uint64 = 9000
+	DefaultDenom             = "ahbc"
+)
+
 func MustGetDefaultNodeHome() string {
 	defaultNodeHome, err := clienthelpers.GetNodeHomeDirectory(".evmd")
 	if err != nil {

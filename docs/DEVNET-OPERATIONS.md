@@ -50,15 +50,21 @@ validators, genesis distribution, peer discovery, upgrade coordination,
 snapshots, metrics, alerts, and recovery instructions. Do not promote the
 current one-validator node by simply opening its RPC port to the internet.
 
-The `hourd testnet init-files` generator now writes CometBFT RPC, REST, gRPC,
+The application default EVM chain ID is 9000 (`0x2328`), matching the
+development network. The in-process `hourd testnet start` command supports one
+validator because this EVM module keeps chain configuration process-global;
+its validator count defaults to one and larger values fail with guidance to
+use `init-files`. The `hourd testnet init-files` generator is the separate-
+process path for multi-validator networks. It writes CometBFT RPC, REST, gRPC,
 and EVM JSON-RPC listeners to loopback; JSON-RPC exposes only `eth`, `net`,
 and `web3`, and telemetry is disabled by default. CometBFT P2P remains
 peer-facing, and genesis transaction memos populate each node's persistent
 peer list. Generated wallet seed files use mode `0600`. Published demo-key
 accounts are absent unless the explicitly unsafe
 `--unsafe-include-published-demo-accounts` flag is given. The in-process
-`hourd testnet start` command also defaults its RPC, REST, and gRPC listeners
-to loopback. A generated four-validator local configuration was inspected on
+command defaults CometBFT RPC, REST, gRPC, and EVM JSON-RPC listeners to
+loopback. An isolated live integration run confirmed block production and
+`eth_chainId == 9000`. A generated four-validator local configuration was inspected on
 2026-10-20: every node had loopback RPC/REST/gRPC/JSON-RPC on distinct local
 ports, the least-privilege JSON-RPC namespace set, and a three-peer list.
 This proves config generation only; operators still need to run the network,

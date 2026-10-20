@@ -17,6 +17,7 @@ func TestInProcessTestnetRPCDefaultsToLoopback(t *testing.T) {
 	require.Equal(t, "tcp://127.0.0.1:26657", cmd.Flags().Lookup(flagRPCAddress).DefValue)
 	require.Equal(t, "tcp://127.0.0.1:1317", cmd.Flags().Lookup(flagAPIAddress).DefValue)
 	require.Equal(t, "127.0.0.1:9090", cmd.Flags().Lookup(flagGRPCAddress).DefValue)
+	require.Equal(t, "127.0.0.1:8545", cmd.Flags().Lookup(flagJSONRPCAddress).DefValue)
 }
 
 func TestWriteSecretFileUsesPrivatePermissions(t *testing.T) {

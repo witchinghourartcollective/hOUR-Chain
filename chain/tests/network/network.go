@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -27,12 +29,16 @@ import (
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/evm/crypto/hd"
-	"github.com/witchinghourartcollective/hour-chain/chain"
-	evmconfig "github.com/witchinghourartcollective/hour-chain/chain/config"
 	"github.com/cosmos/evm/server/config"
+	srvflags "github.com/cosmos/evm/server/flags"
 	evmtestutil "github.com/cosmos/evm/testutil"
 	testconstants "github.com/cosmos/evm/testutil/constants"
+	evmnetwork "github.com/cosmos/evm/testutil/integration/evm/network"
 	"github.com/cosmos/evm/utils"
+	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
+	evmtypes "github.com/cosmos/evm/x/vm/types"
+	"github.com/witchinghourartcollective/hour-chain/chain"
+	evmconfig "github.com/witchinghourartcollective/hour-chain/chain/config"
 
 	"cosmossdk.io/log/v2"
 	"cosmossdk.io/math"
@@ -40,6 +46,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
+	clientflags "github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -60,8 +67,8 @@ import (
 
 // package-wide network lock to only allow one test network at a time
 var (
-	lock     = new(sync.Mutex)
-	portPool = make(chan string, 200)
+	lock                     = new(sync.Mutex)
+	defaultJSONRPCNamespaces = []string{"eth", "net", "web3"}
 )
 
 // AppConstructor defines a function which accepts a network configuration and
@@ -103,13 +110,32 @@ type Config struct {
 // DefaultConfig returns a sane default configuration suitable for nearly all
 // testing requirements.
 func DefaultConfig() Config {
-	chainID := "evmos-1"
+	return NewConfig("evmos-1", evmconfig.DefaultEVMChainID)
+}
+
+// NewConfig builds a one-validator in-process hOUR test network. EVM chain
+// configuration is process-global; use testnet init-files for multi-node runs.
+func NewConfig(chainID string, evmChainID uint64) Config {
 	dir, err := os.MkdirTemp("", "simapp")
 	if err != nil {
 		panic(fmt.Sprintf("failed creating temporary directory: %v", err))
 	}
 	defer os.RemoveAll(dir)
-	tempApp := evmd.NewExampleApp(log.NewNopLogger(), dbm.NewMemDB(), true, simutils.NewAppOptionsWithFlagHome(dir), baseapp.SetChainID(chainID))
+	appOptions := simutils.AppOptionsMap{clientflags.FlagHome: dir, srvflags.EVMChainID: evmChainID}
+	tempApp := evmd.NewExampleApp(log.NewNopLogger(), dbm.NewMemDB(), true, appOptions, baseapp.SetChainID(chainID))
+	genesisState := tempApp.DefaultGenesis()
+	var bankGenesis banktypes.GenesisState
+	tempApp.AppCodec().MustUnmarshalJSON(genesisState[banktypes.ModuleName], &bankGenesis)
+	bankGenesis.DenomMetadata = evmnetwork.GenerateBankGenesisMetadata(evmtypes.DefaultEVMChainID)
+	genesisState[banktypes.ModuleName] = tempApp.AppCodec().MustMarshalJSON(&bankGenesis)
+	var evmGenesis evmtypes.GenesisState
+	tempApp.AppCodec().MustUnmarshalJSON(genesisState[evmtypes.ModuleName], &evmGenesis)
+	evmGenesis.Params.EvmDenom = testconstants.ChainsCoinInfo[evmtypes.DefaultEVMChainID].Denom
+	genesisState[evmtypes.ModuleName] = tempApp.AppCodec().MustMarshalJSON(&evmGenesis)
+	var feeMarketGenesis feemarkettypes.GenesisState
+	tempApp.AppCodec().MustUnmarshalJSON(genesisState[feemarkettypes.ModuleName], &feeMarketGenesis)
+	feeMarketGenesis.Params.NoBaseFee = true
+	genesisState[feemarkettypes.ModuleName] = tempApp.AppCodec().MustMarshalJSON(&feeMarketGenesis)
 
 	cfg := Config{
 		Codec:             tempApp.AppCodec(),
@@ -117,36 +143,26 @@ func DefaultConfig() Config {
 		LegacyAmino:       tempApp.LegacyAmino(),
 		InterfaceRegistry: tempApp.InterfaceRegistry(),
 		AccountRetriever:  authtypes.AccountRetriever{},
-		AppConstructor:    NewAppConstructor(chainID),
-		GenesisState:      tempApp.DefaultGenesis(),
-		TimeoutCommit:     3 * time.Second,
-		ChainID:           chainID,
-		NumValidators:     4,
-		BondDenom:         testconstants.ExampleAttoDenom,
-		MinGasPrices:      fmt.Sprintf("0.000006%s", testconstants.ExampleAttoDenom),
-		AccountTokens:     sdk.TokensFromConsensusPower(1000000000000000000, utils.AttoPowerReduction),
-		StakingTokens:     sdk.TokensFromConsensusPower(500000000000000000, utils.AttoPowerReduction),
-		BondedTokens:      sdk.TokensFromConsensusPower(100000000000000000, utils.AttoPowerReduction),
-		PruningStrategy:   pruningtypes.PruningOptionNothing,
-		CleanupDir:        true,
-		SigningAlgo:       string(hd.EthSecp256k1Type),
-		KeyringOptions:    []keyring.Option{hd.EthSecp256k1Option()},
-		PrintMnemonic:     false,
+		AppConstructor: func(Validator) servertypes.Application {
+			return tempApp
+		},
+		GenesisState:    genesisState,
+		TimeoutCommit:   3 * time.Second,
+		ChainID:         chainID,
+		EVMChainID:      evmChainID,
+		NumValidators:   1,
+		BondDenom:       testconstants.ExampleAttoDenom,
+		MinGasPrices:    fmt.Sprintf("0.000006%s", testconstants.ExampleAttoDenom),
+		AccountTokens:   sdk.TokensFromConsensusPower(1000000000000000000, utils.AttoPowerReduction),
+		StakingTokens:   sdk.TokensFromConsensusPower(500000000000000000, utils.AttoPowerReduction),
+		BondedTokens:    sdk.TokensFromConsensusPower(100000000000000000, utils.AttoPowerReduction),
+		PruningStrategy: pruningtypes.PruningOptionNothing,
+		CleanupDir:      true,
+		SigningAlgo:     string(hd.EthSecp256k1Type),
+		KeyringOptions:  []keyring.Option{hd.EthSecp256k1Option()},
+		PrintMnemonic:   false,
 	}
 	return cfg
-}
-
-// NewAppConstructor returns a new Cosmos EVM AppConstructor
-func NewAppConstructor(chainID string) AppConstructor {
-	return func(val Validator) servertypes.Application {
-		return evmd.NewExampleApp(
-			val.Ctx.Logger, dbm.NewMemDB(), true,
-			simutils.NewAppOptionsWithFlagHome(val.Ctx.Config.RootDir),
-			baseapp.SetPruning(pruningtypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
-			baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
-			baseapp.SetChainID(chainID),
-		)
-	}
 }
 
 type (
@@ -228,6 +244,9 @@ func NewCLILogger(cmd *cobra.Command) CLILogger {
 
 // New creates a new Network for integration tests or in-process testnets run via the CLI
 func New(l Logger, baseDir string, cfg Config) (*Network, error) {
+	if cfg.NumValidators != 1 {
+		return nil, fmt.Errorf("in-process hOUR testnet supports one validator because EVM chain configuration is process-global; use testnet init-files for multiple validators")
+	}
 	// only one caller/test can create and use a network at a time
 	l.Log("acquiring test network lock")
 	lock.Lock()
@@ -256,6 +275,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 	// generate private keys, node IDs, and initial transactions
 	for i := 0; i < cfg.NumValidators; i++ {
 		appCfg := config.DefaultConfig()
+		appCfg.EVM.EVMChainID = cfg.EVMChainID
 		appCfg.Pruning = cfg.PruningStrategy
 		appCfg.MinGasPrices = cfg.MinGasPrices
 		appCfg.API.Enable = true
@@ -279,11 +299,11 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			if cfg.APIAddress != "" {
 				apiListenAddr = cfg.APIAddress
 			} else {
-				if len(portPool) == 0 {
-					return nil, fmt.Errorf("failed to get port for API server")
+				port, err := getFreeTCPPort()
+				if err != nil {
+					return nil, fmt.Errorf("failed to get port for API server: %w", err)
 				}
-				port := <-portPool
-				apiListenAddr = fmt.Sprintf("tcp://0.0.0.0:%s", port)
+				apiListenAddr = fmt.Sprintf("tcp://127.0.0.1:%s", port)
 			}
 
 			appCfg.API.Address = apiListenAddr
@@ -296,21 +316,21 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			if cfg.RPCAddress != "" {
 				cmtCfg.RPC.ListenAddress = cfg.RPCAddress
 			} else {
-				if len(portPool) == 0 {
-					return nil, fmt.Errorf("failed to get port for RPC server")
+				port, err := getFreeTCPPort()
+				if err != nil {
+					return nil, fmt.Errorf("failed to get port for RPC server: %w", err)
 				}
-				port := <-portPool
-				cmtCfg.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%s", port)
+				cmtCfg.RPC.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%s", port)
 			}
 
 			if cfg.GRPCAddress != "" {
 				appCfg.GRPC.Address = cfg.GRPCAddress
 			} else {
-				if len(portPool) == 0 {
-					return nil, fmt.Errorf("failed to get port for GRPC server")
+				port, err := getFreeTCPPort()
+				if err != nil {
+					return nil, fmt.Errorf("failed to get port for GRPC server: %w", err)
 				}
-				port := <-portPool
-				appCfg.GRPC.Address = fmt.Sprintf("0.0.0.0:%s", port)
+				appCfg.GRPC.Address = fmt.Sprintf("127.0.0.1:%s", port)
 			}
 			appCfg.GRPC.Enable = true
 			appCfg.GRPCWeb.Enable = true
@@ -318,14 +338,14 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			if cfg.JSONRPCAddress != "" {
 				appCfg.JSONRPC.Address = cfg.JSONRPCAddress
 			} else {
-				if len(portPool) == 0 {
-					return nil, fmt.Errorf("failed to get port for JSON-RPC server")
+				port, err := getFreeTCPPort()
+				if err != nil {
+					return nil, fmt.Errorf("failed to get port for JSON-RPC server: %w", err)
 				}
-				port := <-portPool
-				appCfg.JSONRPC.Address = fmt.Sprintf("0.0.0.0:%s", port)
+				appCfg.JSONRPC.Address = fmt.Sprintf("127.0.0.1:%s", port)
 			}
 			appCfg.JSONRPC.Enable = true
-			appCfg.JSONRPC.API = config.GetAPINamespaces()
+			appCfg.JSONRPC.API = append([]string(nil), defaultJSONRPCNamespaces...)
 		}
 
 		logger := log.NewNopLogger()
@@ -354,18 +374,18 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		cmtCfg.Moniker = nodeDirName
 		monikers[i] = nodeDirName
 
-		if len(portPool) == 0 {
-			return nil, fmt.Errorf("failed to get port for Proxy server")
+		port, err := getFreeTCPPort()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get port for Proxy server: %w", err)
 		}
-		port := <-portPool
-		proxyAddr := fmt.Sprintf("tcp://0.0.0.0:%s", port)
+		proxyAddr := fmt.Sprintf("tcp://127.0.0.1:%s", port)
 		cmtCfg.ProxyApp = proxyAddr
 
-		if len(portPool) == 0 {
-			return nil, fmt.Errorf("failed to get port for Proxy server")
+		port, err = getFreeTCPPort()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get port for P2P server: %w", err)
 		}
-		port = <-portPool
-		p2pAddr := fmt.Sprintf("tcp://0.0.0.0:%s", port)
+		p2pAddr := fmt.Sprintf("tcp://127.0.0.1:%s", port)
 		cmtCfg.P2P.ListenAddress = p2pAddr
 		cmtCfg.P2P.AddrBookStrict = false
 		cmtCfg.P2P.AllowDuplicateIP = true
@@ -484,7 +504,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 			return nil, err
 		}
 
-		customAppTemplate, _ := evmconfig.InitAppConfig(testconstants.ExampleAttoDenom, testconstants.EighteenDecimalsChainID)
+		customAppTemplate, _ := evmconfig.InitAppConfig(testconstants.ExampleAttoDenom, cfg.EVMChainID)
 		srvconfig.SetConfigTemplate(customAppTemplate)
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appCfg)
 
@@ -546,6 +566,18 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 	trapSignal(network.Cleanup)
 
 	return network, nil
+}
+
+func getFreeTCPPort() (string, error) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return "", err
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := listener.Close(); err != nil {
+		return "", err
+	}
+	return strconv.Itoa(port), nil
 }
 
 // LatestHeight returns the latest height of the network or an error if the

@@ -4,6 +4,7 @@
 package network_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -11,8 +12,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/suite"
 
-	cosmosevmnetwork "github.com/witchinghourartcollective/hour-chain/chain/tests/network"
 	"github.com/cosmos/evm/server/config"
+	hourconfig "github.com/witchinghourartcollective/hour-chain/chain/config"
+	cosmosevmnetwork "github.com/witchinghourartcollective/hour-chain/chain/tests/network"
 )
 
 type IntegrationTestSuite struct {
@@ -41,6 +43,12 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		s.network.Validators[0].JSONRPCClient, err = ethclient.Dial(address)
 		s.Require().NoError(err)
 	}
+
+	ctx, cancel := context.WithTimeout(s.T().Context(), 5*time.Second)
+	defer cancel()
+	chainID, err := s.network.Validators[0].JSONRPCClient.ChainID(ctx)
+	s.Require().NoError(err)
+	s.Require().Equal(hourconfig.DefaultEVMChainID, chainID.Uint64())
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
