@@ -68,11 +68,92 @@ Before calling a network a public testnet, require:
   process check.
 - Clear faucet-only asset and PQ-risk disclosures.
 
-## Owner decisions
+## Owner decisions (recorded 2026-10-20)
 
-1. Select one of the three token-model options above, or provide a different
-   model.
-2. Confirm the staged permissioned-testnet recommendation or choose another
-   validator model.
-3. Decide whether to revise ADR-0002 for a disclosed conventional-key
-   testnet exception, or keep that requirement as a hard testnet gate.
+1. **Token model: faucet-only now, HOUR-as-single-asset is the target.**
+   No market value or launch economics on the current testnet. The
+   long-term direction is HOUR (not a separate HBC denom) as the one
+   canonical economic asset across Base and hOUR Chain. See
+   [Target token relationship](#target-token-relationship-hour-as-the-single-asset)
+   below for what that requires before it can be deployed; `ahbc` stays an
+   unpriced placeholder denom until that design is finished.
+2. **Validator model: staged.** Start with permissioned, independently
+   operated validators and no real rewards (not marketed as
+   decentralized). Build the open-PoS admission criteria (stake minimum,
+   rewards, slashing, unbonding) now so the network can open up later
+   without a second redesign. See
+   [Staged validator path](#staged-validator-path) below.
+3. **Post-quantum requirement: kept as a hard blocker.** No public
+   testnet — regardless of token or validator readiness — until hOUR
+   Chain has actual PQ-capable authorization on validator consensus keys
+   and EVM account keys, not just the existing ML-DSA event-signature
+   layer. ADR-0002 is not revised. See
+   [PQ unblock plan](#pq-unblock-plan) below for what closes this gate.
+
+## Target token relationship (HOUR as the single asset)
+
+Not yet specified — this is new design work, not an existing decision.
+Before HOUR (rather than a separate `ahbc`/HBC denom) can be the chain's
+native gas/staking asset, this document needs an owner-reviewed answer
+for each of:
+
+- How Base `HourToken` supply (mainnet `0xFC1c0FFF99845676A588CE21c28C4859F3035866`)
+  maps to hOUR Chain's native bank denom — 1:1 via the existing
+  `HourBridgeVault`/`WrappedHour` bridge (ADR-0007), or a separate
+  issuance.
+- Whether the bridged `whOUR` ERC-20 (devnet:
+  `0x3D641a2791533B4A0000345eA8d509d01E1ec301`) and the native bank denom
+  are the same asset (via `x/evm` precompile / ERC-20 module pairing) or
+  two representations that need their own peg logic.
+- Whether gas and staking are paid in the same denom as the bridged
+  asset, or whether a thin native gas denom survives alongside HOUR for
+  fee-market stability (the ADR-0007 bridge is explicitly **not**
+  trust-minimized — no light client, no fraud proof — so staking the
+  chain's security on a multisig-bridged supply needs its own risk
+  review before it's treated as load-bearing).
+- IBC voucher treatment: whether `ibc/...` vouchers of bridged HOUR get
+  unwrapped to the native denom automatically or require a separate
+  claim step.
+
+This is tokenomics/design work, not a code task — flag for review once
+drafted rather than deploying contracts against it.
+
+## Staged validator path
+
+Phase 1 (now): permissioned, independently operated validators, no
+rewards, explicit "not decentralized" disclosure on any public-facing
+testnet description.
+
+Phase 2 (prep now, activate later) needs, before it can open:
+
+- Minimum stake amount and bond denom (depends on the token decision
+  above — can't be priced in `ahbc` if `ahbc` isn't the final asset).
+- Admission criteria for new validators (self-bond minimum, commission
+  bounds, uptime/slashing conditions).
+- Slashing conditions (double-sign, downtime) and unbonding period.
+- Validator-set governance: how new validators get admitted to a
+  previously-permissioned set without a hard fork.
+- Key rotation / incident recovery procedure for validator operators
+  (ties into HBC-010, still an open tracking issue).
+
+## PQ unblock plan
+
+What currently exists: an ML-DSA event-signature profile for protocol
+events (ADR-0002 follow-up item, prototyped). What's missing and
+gates any public testnet:
+
+1. Validator consensus authorization still signs blocks with Ed25519
+   (CometBFT default) — no PQ consensus signature scheme is wired in.
+2. EVM accounts (bridge signers, user transactions) still authorize with
+   secp256k1 — no PQ or composite conventional+PQC EVM account scheme
+   exists yet.
+3. ADR-0002's own follow-up list (benchmark PQC costs, define signature-
+   suite registry, independent cryptographic review) is still open.
+
+Unblocking this is a research/engineering track, not a config change —
+treat it as its own workstream with its own timeline rather than a
+blocker to resolve inline while pushing for "public and live."
+Reasonable next step: scope (1) and (2) as separate spikes — CometBFT's
+validator signing interface vs. a custom composite EVM account scheme —
+and get a rough effort estimate before committing a date to "public
+testnet."
