@@ -19,12 +19,12 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	cosmosevmhd "github.com/cosmos/evm/crypto/hd"
 	cosmosevmkeyring "github.com/cosmos/evm/crypto/keyring"
-	"github.com/witchinghourartcollective/hour-chain/chain"
-	"github.com/witchinghourartcollective/hour-chain/chain/config"
-	customnetwork "github.com/witchinghourartcollective/hour-chain/chain/tests/network"
 	cosmosevmserverconfig "github.com/cosmos/evm/server/config"
 	evmnetwork "github.com/cosmos/evm/testutil/integration/evm/network"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
+	"github.com/witchinghourartcollective/hour-chain/chain"
+	"github.com/witchinghourartcollective/hour-chain/chain/config"
+	customnetwork "github.com/witchinghourartcollective/hour-chain/chain/tests/network"
 
 	"cosmossdk.io/log/v2"
 	"cosmossdk.io/math"
@@ -67,10 +67,13 @@ var (
 	flagCommitTimeout      = "commit-timeout"
 	configChanges          = "config-changes"
 	flagValidatorPowers    = "validator-powers"
+	flagUnsafeDemoAccounts = "unsafe-include-published-demo-accounts"
 	unsafeStartValidatorFn UnsafeStartValidatorCmdCreator
 )
 
 const TEST_DENOM = "atest"
+
+var defaultTestnetJSONRPCApis = []string{"eth", "net", "web3"}
 
 var mnemonics = []string{
 	"copper push brief egg scan entry inform record adjust fossil boss egg comic alien upon aspect dry avoid interest fury window hint race symptom",
@@ -82,19 +85,20 @@ var mnemonics = []string{
 type UnsafeStartValidatorCmdCreator func(ac appCreator) *cobra.Command
 
 type initArgs struct {
-	algo              string
-	chainID           string
-	keyringBackend    string
-	minGasPrices      string
-	nodeDaemonHome    string
-	nodeDirPrefix     string
-	numValidators     int
-	outputDir         string
-	startingIPAddress string
-	singleMachine     bool
-	useDocker         bool
-	configChanges     []string
-	validatorPowers   []int64
+	algo               string
+	chainID            string
+	keyringBackend     string
+	minGasPrices       string
+	nodeDaemonHome     string
+	nodeDirPrefix      string
+	numValidators      int
+	outputDir          string
+	startingIPAddress  string
+	singleMachine      bool
+	unsafeDemoAccounts bool
+	useDocker          bool
+	configChanges      []string
+	validatorPowers    []int64
 }
 
 type startArgs struct {
@@ -192,6 +196,7 @@ Example:
 			args.startingIPAddress, _ = cmd.Flags().GetString(flagStartingIPAddress)
 			args.numValidators, _ = cmd.Flags().GetInt(flagNumValidators)
 			args.singleMachine, _ = cmd.Flags().GetBool(flagSingleHost)
+			args.unsafeDemoAccounts, _ = cmd.Flags().GetBool(flagUnsafeDemoAccounts)
 			config.Consensus.TimeoutCommit, err = cmd.Flags().GetDuration(flagCommitTimeout)
 			if err != nil {
 				return err
@@ -218,6 +223,7 @@ Example:
 	cmd.Flags().String(flags.FlagKeyringBackend, flags.DefaultKeyringBackend, "Select keyring's backend (os|file|test)")
 	cmd.Flags().Bool(flagsUseDocker, false, "test network via docker")
 	cmd.Flags().StringSlice(configChanges, []string{}, "Config changes to apply to the node: i.e. consensus.timeout_commit=50s")
+	cmd.Flags().Bool(flagUnsafeDemoAccounts, false, "UNSAFE local demo only: fund accounts controlled by published mnemonics")
 
 	return cmd
 }
@@ -260,10 +266,10 @@ Example:
 
 	addTestnetFlagsToCmd(cmd)
 	cmd.Flags().Bool(flagEnableLogging, false, "Enable INFO logging of CometBFT validator nodes")
-	cmd.Flags().String(flagRPCAddress, "tcp://0.0.0.0:26657", "the RPC address to listen on")
-	cmd.Flags().String(flagAPIAddress, "tcp://0.0.0.0:1317", "the address to listen on for REST API")
-	cmd.Flags().String(flagGRPCAddress, "0.0.0.0:9090", "the gRPC server address to listen on")
-	cmd.Flags().Bool(flagPrintMnemonic, true, "print mnemonic of first validator to stdout for manual testing")
+	cmd.Flags().String(flagRPCAddress, "tcp://127.0.0.1:26657", "the local RPC address to listen on")
+	cmd.Flags().String(flagAPIAddress, "tcp://127.0.0.1:1317", "the local REST API address to listen on")
+	cmd.Flags().String(flagGRPCAddress, "127.0.0.1:9090", "the local gRPC server address to listen on")
+	cmd.Flags().Bool(flagPrintMnemonic, false, "print the first validator mnemonic to stdout (sensitive; local testing only)")
 	return cmd
 }
 
@@ -317,7 +323,7 @@ func initTestnetFiles(
 	appConfig := srvconfig.DefaultConfig()
 	appConfig.MinGasPrices = args.minGasPrices
 	appConfig.API.Enable = true
-	appConfig.Telemetry.Enabled = true
+	appConfig.Telemetry.Enabled = false
 	appConfig.Telemetry.PrometheusRetentionTime = 60
 	appConfig.Telemetry.EnableHostnameLabel = false
 	appConfig.Telemetry.GlobalLabels = [][]string{{"chain_id", args.chainID}}
@@ -356,7 +362,7 @@ func initTestnetFiles(
 		var evmPortOffset int
 		evmCfg.JSONRPC.Enable = true
 		evmCfg.JSONRPC.EnableIndexer = true
-		evmCfg.JSONRPC.API = []string{"eth", "txpool", "personal", "net", "debug", "web3"}
+		evmCfg.JSONRPC.API = append([]string(nil), defaultTestnetJSONRPCApis...)
 		evmCfg.API.Enable = true
 		if args.singleMachine {
 			portOffset = i
@@ -367,23 +373,23 @@ func initTestnetFiles(
 			nodeConfig.P2P.AllowDuplicateIP = true
 			nodeConfig.Instrumentation.Prometheus = false
 			nodeConfig.RPC.PprofListenAddress = ""
-			evmCfg.Config.API.Address = fmt.Sprintf("tcp://0.0.0.0:%d", sdkAPIPort+portOffset)
-			evmCfg.Config.GRPC.Address = fmt.Sprintf("0.0.0.0:%d", sdkGRPCPort+portOffset)
 			evmCfg.JSONRPC.Address = fmt.Sprintf("127.0.0.1:%d", evmJSONRPC+evmPortOffset)
 			evmCfg.JSONRPC.MetricsAddress = fmt.Sprintf("127.0.0.1:%d", evmJSONRPCMetrics+evmPortOffset)
 			evmCfg.JSONRPC.WsAddress = fmt.Sprintf("127.0.0.1:%d", evmJSONRPCWS+evmPortOffset)
 			evmCfg.EVM.GethMetricsAddress = fmt.Sprintf("127.0.0.1:%d", evmGethMetricsPort+evmPortOffset)
 		} else {
-			evmCfg.JSONRPC.WsAddress = fmt.Sprintf("0.0.0.0:%d", evmJSONRPCWS)
-			evmCfg.JSONRPC.Address = fmt.Sprintf("0.0.0.0:%d", evmJSONRPC)
+			evmCfg.JSONRPC.WsAddress = fmt.Sprintf("127.0.0.1:%d", evmJSONRPCWS)
+			evmCfg.JSONRPC.Address = fmt.Sprintf("127.0.0.1:%d", evmJSONRPC)
 		}
+		evmCfg.Config.API.Address = fmt.Sprintf("tcp://127.0.0.1:%d", sdkAPIPort+portOffset)
+		evmCfg.Config.GRPC.Address = fmt.Sprintf("127.0.0.1:%d", sdkGRPCPort+portOffset)
 		nodeDirName := fmt.Sprintf("%s%d", args.nodeDirPrefix, i)
 		nodeDir := filepath.Join(args.outputDir, nodeDirName, args.nodeDaemonHome)
 		gentxsDir := filepath.Join(args.outputDir, "gentxs")
 
 		nodeConfig.SetRoot(nodeDir)
 		nodeConfig.Moniker = nodeDirName
-		nodeConfig.RPC.ListenAddress = fmt.Sprintf("tcp://:%d", sdkRPCPort+portOffset)
+		nodeConfig.RPC.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", sdkRPCPort+portOffset)
 
 		if err := os.MkdirAll(filepath.Join(nodeDir, "config"), nodeDirPerm); err != nil {
 			_ = os.RemoveAll(args.outputDir)
@@ -414,6 +420,9 @@ func initTestnetFiles(
 			_ = os.RemoveAll(args.outputDir)
 			return err
 		}
+		// Persist the per-node CometBFT RPC/P2P binds. The default init helper
+		// writes keys but does not write config.toml for this custom generator.
+		cmtconfig.WriteConfigFile(filepath.Join(nodeDir, "config", "config.toml"), nodeConfig)
 
 		memo := fmt.Sprintf("%s@%s:%d", nodeIDs[i], ip, p2pPortStart+portOffset)
 		genFiles = append(genFiles, nodeConfig.GenesisFile())
@@ -436,14 +445,12 @@ func initTestnetFiles(
 		}
 
 		info := map[string]string{"secret": secret}
-
 		cliPrint, err := json.Marshal(info)
 		if err != nil {
 			return err
 		}
-
-		// save private key seed words
-		if err := writeFile(fmt.Sprintf("%v.json", "key_seed"), nodeDir, cliPrint); err != nil {
+		// This is a private wallet seed, not ordinary testnet configuration.
+		if err := writeSecretFile("key_seed.json", nodeDir, cliPrint); err != nil {
 			return err
 		}
 
@@ -457,7 +464,8 @@ func initTestnetFiles(
 		genBalances = append(genBalances, banktypes.Balance{Address: addr.String(), Coins: coins.Sort()})
 		genAccounts = append(genAccounts, authtypes.NewBaseAccount(addr, nil, 0, 0))
 
-		if i == 0 {
+		if i == 0 && args.unsafeDemoAccounts {
+			cmd.PrintErrln("WARNING: creating funded accounts controlled by publicly known demo mnemonics; never use these accounts for real value")
 			bals, accs := addExtraAccounts(kb, algo)
 			genBalances = append(genBalances, bals...)
 			genAccounts = append(genAccounts, accs...)
@@ -617,7 +625,7 @@ func collectGenFiles(
 	for i := 0; i < numValidators; i++ {
 		if singleMachine {
 			portOffset := i
-			nodeConfig.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", rpcPortStart+portOffset)
+			nodeConfig.RPC.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", rpcPortStart+portOffset)
 			nodeConfig.P2P.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", p2pPortStart+portOffset)
 		}
 		nodeDirName := fmt.Sprintf("%s%d", nodeDirPrefix, i)
@@ -692,6 +700,25 @@ func writeFile(name string, dir string, contents []byte) error {
 		return err
 	}
 
+	return nil
+}
+
+func writeSecretFile(name string, dir string, contents []byte) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("could not create directory %q: %w", dir, err)
+	}
+	file := filepath.Join(dir, name)
+	f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return fmt.Errorf("could not create private seed file %q: %w", file, err)
+	}
+	defer f.Close()
+	if _, err := f.Write(contents); err != nil {
+		return fmt.Errorf("could not write private seed file %q: %w", file, err)
+	}
+	if err := f.Sync(); err != nil {
+		return fmt.Errorf("could not sync private seed file %q: %w", file, err)
+	}
 	return nil
 }
 

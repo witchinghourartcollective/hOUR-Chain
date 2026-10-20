@@ -1,10 +1,32 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestTestnetJSONRPCNamespacesExcludePrivilegedAPIs(t *testing.T) {
+	require.Equal(t, []string{"eth", "net", "web3"}, defaultTestnetJSONRPCApis)
+}
+
+func TestInProcessTestnetRPCDefaultsToLoopback(t *testing.T) {
+	cmd := testnetStartCmd()
+	require.Equal(t, "tcp://127.0.0.1:26657", cmd.Flags().Lookup(flagRPCAddress).DefValue)
+	require.Equal(t, "tcp://127.0.0.1:1317", cmd.Flags().Lookup(flagAPIAddress).DefValue)
+	require.Equal(t, "127.0.0.1:9090", cmd.Flags().Lookup(flagGRPCAddress).DefValue)
+}
+
+func TestWriteSecretFileUsesPrivatePermissions(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "key_seed.json")
+	require.NoError(t, writeSecretFile("key_seed.json", dir, []byte(`{"secret":"test-only"}`)))
+	info, err := os.Stat(path)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+}
 
 func TestParseValidatorPowers(t *testing.T) {
 	tests := []struct {
