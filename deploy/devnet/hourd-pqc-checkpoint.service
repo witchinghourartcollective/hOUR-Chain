@@ -1,0 +1,18 @@
+[Unit]
+Description=Sign one ML-DSA consensus-checkpoint attestation for the latest hOUR devnet block
+After=hourd.service
+
+[Service]
+Type=oneshot
+User=hourd
+Group=hourd
+ExecStart=/usr/local/libexec/hourd-pqc-checkpoint.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/hourd-data/pqc
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=100.76.58.84
+IPAddressAllow=127.0.0.1

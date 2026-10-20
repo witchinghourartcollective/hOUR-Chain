@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodically ML-DSA-sign an hOUR devnet consensus checkpoint
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=15min
+AccuracySec=1min
+Persistent=true
+Unit=hourd-pqc-checkpoint.service
+
+[Install]
+WantedBy=timers.target
