@@ -139,21 +139,63 @@ Phase 2 (prep now, activate later) needs, before it can open:
 ## PQ unblock plan
 
 What currently exists: an ML-DSA event-signature profile for protocol
-events (ADR-0002 follow-up item, prototyped). What's missing and
-gates any public testnet:
+events (ADR-0002 follow-up item, prototyped), and, as of 2026-10-20, an
+additive ML-DSA consensus-checkpoint co-signing layer (see below). What's
+still missing and gates any public testnet:
 
 1. Validator consensus authorization still signs blocks with Ed25519
-   (CometBFT default) — no PQ consensus signature scheme is wired in.
+   (CometBFT default) — the checkpoint layer below attests blocks
+   independently, but does not replace Ed25519 as the actual consensus
+   signature.
 2. EVM accounts (bridge signers, user transactions) still authorize with
    secp256k1 — no PQ or composite conventional+PQC EVM account scheme
-   exists yet.
-3. ADR-0002's own follow-up list (benchmark PQC costs, define signature-
-   suite registry, independent cryptographic review) is still open.
+   exists yet. Scoped path: `account-abstraction/` (ERC-4337 fork
+   already in the workspace) has `BaseAccount._validateSignature` as a
+   pluggable extension point; a `PqcAccount.sol` there can call a custom
+   ML-DSA precompile on hOUR Chain's own `cosmos/evm` backport (cheap,
+   since we already maintain that fork) or, for the Base-mainnet bridge
+   signers specifically, ZKNoxHQ's `ETHDILITHIUM` Solidity verifier
+   (~850K-1.2M gas; acceptable for infrequent bridge confirms, not for
+   routine user txs). Not yet built.
+3. ADR-0002's own follow-up list (benchmark PQC costs, independent
+   cryptographic review) is still open.
 
-Unblocking this is a research/engineering track, not a config change —
-treat it as its own workstream with its own timeline rather than a
-blocker to resolve inline while pushing for "public and live."
-Reasonable next step: scope (1) and (2) as separate spikes — CometBFT's
-validator signing interface vs. a custom composite EVM account scheme —
-and get a rough effort estimate before committing a date to "public
-testnet."
+Decision recorded 2026-10-20: validator-consensus PQ is staged — start
+with (1a) below now, (1b) is the end target.
+
+### 1a. Built now: additive ML-DSA checkpoint co-signing
+
+`packages/pqc-checkpoint/` (new): each validator operator independently
+ML-DSA-65-signs a canonical `{chainId, height, blockHash, appHash, time}`
+envelope for a given block (reusing `packages/pqc-profile`'s existing
+sign/verify primitives and domain-separated canonicalization). A
+separate verifier checks a quorum of these signatures against the live
+CometBFT validator set's voting power, using the standard BFT `>2/3`
+threshold. This does **not** touch consensus signing — Ed25519 still
+produces the actual block signatures — it adds an independently
+PQ-verifiable attestation on top. Proven end-to-end against the live
+devnet node (`whm-lnd-cloud`, height 83317, chain `hour_9000-1`,
+single-validator quorum of 1): see `packages/pqc-checkpoint/test/` for
+the unit-tested quorum math (including the exactly-2/3-is-not-quorum
+edge case) and `bin/sign-checkpoint.mjs` / `bin/verify-checkpoint.mjs`
+for the live CLI path. Not yet deployed as a running service — the
+signer's ML-DSA private key is a new validator-operator credential and
+should get the same custody/rotation treatment as the existing
+`priv_validator_key.json` (ties into HBC-010) before it runs
+unattended on shared infra.
+
+### 1b. End target: fork cometbft + cosmos-sdk crypto codecs
+
+`cometbft@v0.39.3`'s `crypto/encoding/codec.go` (`PubKeyToProto` /
+`PubKeyFromProto` / `PubKeyFromTypeAndBytes`) and cosmos-sdk's parallel
+`crypto/codec` are closed Go type switches over
+`ed25519.PubKey | secp256k1.PubKey | bls12381.PubKey` — not a pluggable
+registry. Making ML-DSA an actual consensus signature (not just an
+additive checkpoint) means patching both: add a `PublicKey_Mldsa` proto
+case, regenerate, and wire a new `crypto/mldsa` package (trivial — ML-DSA
+signing/verification is a plain Go interface; `cloudflare/circl@v1.5.0`'s
+`sign/mldsa/mldsa65` already matches the `ML-DSA-65` identifier in
+`SIGNATURE-CANONICALIZATION.md` and needs no toolchain bump). The real
+cost is maintaining this as a permanent fork: light clients, explorers,
+and any tooling built against stock CometBFT won't understand the new
+pubkey type without the same patch. Not started.
