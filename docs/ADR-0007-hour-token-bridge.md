@@ -45,19 +45,44 @@ hOUR Chain's EVM RPC as a deployment network, not a different codebase.
 
 ## Consequences
 
+### Security audit and hardening follow-up (2026-10-20)
+
+- The Base mainnet vault owner was re-read at block 52,834,228. It is
+  `0x4e59b44847b379578588920cA78FbF26c0B4956C`, the deterministic CREATE2
+  deployment proxy, not a Safe. The old constructor used `Ownable(msg.sender)`
+  while deploying through that proxy, so owner-only functions are effectively
+  inaccessible. The signer set cannot be rotated and the threshold cannot be
+  adjusted on this immutable deployment. The vault still reports threshold 2,
+  three configured signers, and HOUR balance zero; its fee-exempt flag is set.
+- The hOUR devnet `WrappedHour` at
+  `0x3D641a2791533B4A0000345eA8d509d01E1ec301` was also checked over the
+  private RPC: owner `0xc6fe5d33615a1c52c08018c47e8bc53646a0e101` is an EOA,
+  threshold is 2, signer count is 3, and testnet supply is 5 whOUR. Its owner
+  retains single-key signer and threshold authority.
+- Fresh `HourBridgeVault` and `WrappedHour` deployments now accept an explicit
+  owner address, enforce at least three signers and a minimum 2-of-3 threshold,
+  and require add-before-remove signer rotation. Base deployment scripts
+  refuse an owner without contract code. These source changes do not alter
+  either existing deployment.
+- Do not deposit real HOUR into the old Base vault. Before a production
+  bridge, deploy replacements with a Safe owner and independently custodied
+  signers on both chains; then set the replacement Base vault fee-exempt and
+  verify the exact addresses and policy from receipts. The old Base vault has
+  no HOUR to migrate; the devnet whOUR is faucet/testnet supply only.
+
 - The existing `HourToken` contract is **not modified or redeployed**. Its
   existing `isFeeExempt` mechanism is sufficient: the vault is marked fee-
   exempt so locks/releases move 1:1 without the 2/3/2% fee split.
-- The owner retains unilateral control over each contract's signer set and
-  threshold (same trust level as `HourToken`'s existing `Ownable`
-  governance). This is a known centralization point, acceptable at the
-  current single-founder stage. Must be revisited (e.g. moved to a real
-  multisig/Safe) before meaningful external value is at risk.
+- The deployed hOUR `WrappedHour` owner is a single EOA and can change the
+  signer set and threshold. The deployed Base vault's owner is the CREATE2
+  factory and is effectively unusable, so that signer set is frozen. Neither
+  deployed contract currently has a properly configured Safe owner.
 - Relayer automation (`npm run bridge:relay` in `witching-hour-token`) is
   implemented, but deliberately auto-confirms with only one signer. The
   second confirmation needed to reach threshold is a manual command
-  (`bridge:confirm`) run with a different signer, so a compromised or
-  buggy relayer can never clear the threshold alone.
+  (`bridge:confirm`) run with a different signer. Signers 1 and 2 still share
+  a CDP API key, so this operator workflow does not guarantee independent
+  custody if that shared key or relayer host is compromised.
 - **Signer-3's custody is now independent of CDP**, as of 2026-10-14.
   `scripts/relayer/export-signer-key.mjs` exported it (RSA-4096/OAEP-
   SHA256, same scheme as the CDP SDK's own export flow, run by Fletcher
@@ -69,7 +94,10 @@ hOUR Chain's EVM RPC as a deployment network, not a different codebase.
   several attempts and was deliberately not pursued further — a wallet
   app isn't required: `manual-confirm.mjs --local-key-file=<path>`
   signs directly from a key file pulled out of Bitwarden when needed.
-  Signers 1 and 2 remain under the original shared CDP API key.
+  Signers 1 and 2 remain under the original shared CDP API key. Since the
+  threshold is 2-of-3, those two can satisfy quorum without signer 3; the
+  production signer set therefore does not yet provide independent 2-of-3
+  custody.
 - The full lock → relay → mint cycle was proved end-to-end for free on
   2026-10-13, using Base Sepolia (not mainnet) and the real hOUR Chain
   devnet. `WrappedHour` is deployed to the devnet at

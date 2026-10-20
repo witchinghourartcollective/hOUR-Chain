@@ -1,8 +1,11 @@
+import { randomInt } from "node:crypto";
+import { Client as CliqueSdkClient } from "@cliqueofficial/clique-client-sdk-node";
+
 // Clique TEE Network adapter — see docs/ADR-0006-clique-tee-oracle-clob-loyalty.md
 //
-// Scaffold only: CliqueClient throws until real credentials are configured.
-// The build*Event helpers produce hOUR Chain event payloads (not yet signed —
-// pass the result to signEnvelope from @hour-chain/pqc-profile).
+// The TLS Oracle is read-only. The build*Event helpers produce hOUR Chain
+// event payloads (not yet signed — pass the result to signEnvelope from
+// @hour-chain/pqc-profile).
 
 export const EVENT_TYPES = Object.freeze({
   CLOB_FILL: "hour.clob-fill",
@@ -12,48 +15,99 @@ export const EVENT_TYPES = Object.freeze({
 
 export const SUPPORTED_CHAINS = Object.freeze(["solana", "evm-base", "hyperliquid"]);
 
-/**
- * Thin wrapper around @cliqueofficial/clique-client-sdk-node.
- * Not wired to a real account yet — every method throws NotConfiguredError
- * until CLIQUE_API_KEY / CLIQUE_WALLET_ID are set. This is intentional:
- * we do not fabricate network calls against an API we have not integrated
- * against yet. See ADR-0006 "Consequences".
- */
+const parseCsv = (value) => value?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
+
+function requireMeasurements(name, values) {
+  if (!Array.isArray(values) || values.length === 0 || values.some((value) => !/^[a-f0-9]{64}$/i.test(value))) {
+    throw new NotConfiguredError(`${name} must be a comma-separated allowlist of 64-character hex measurements`);
+  }
+  return values.map((value) => value.toLowerCase());
+}
+
+function validateRequest({ url, encoding, allowedHosts }) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new TypeError("url must be a valid HTTPS URL");
+  }
+  const localHttp = parsed.protocol === "http:" && ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+  if (parsed.protocol !== "https:" && !localHttp) {
+    throw new TypeError("TLS Oracle requests must use HTTPS (HTTP is allowed only for a loopback test endpoint)");
+  }
+  if (parsed.username || parsed.password || parsed.hash) {
+    throw new TypeError("url must not contain credentials or a fragment");
+  }
+  if (!allowedHosts.includes(parsed.hostname.toLowerCase())) {
+    throw new TypeError(`TLS Oracle host is not allowlisted: ${parsed.hostname}`);
+  }
+  if (!Array.isArray(encoding) || encoding.length === 0 || encoding.some(
+    (item) => !item || typeof item.from !== "string" || typeof item.soltype !== "string" || !item.soltype.trim(),
+  )) {
+    throw new TypeError("encoding must be a non-empty array of { from, soltype }");
+  }
+  return { url: parsed.toString(), encoding };
+}
+
+/** Read-only Clique TLS Oracle client. Clique's SDK verifies the returned proof. */
 export class CliqueClient {
-  constructor({ apiKey = process.env.CLIQUE_API_KEY, walletId = process.env.CLIQUE_WALLET_ID } = {}) {
-    this.apiKey = apiKey;
-    this.walletId = walletId;
-  }
-
-  #requireConfigured() {
-    if (!this.apiKey || !this.walletId) {
-      throw new NotConfiguredError(
-        "Clique is not configured: set CLIQUE_API_KEY and CLIQUE_WALLET_ID. " +
-        "Install @cliqueofficial/clique-client-sdk-node and wire this method to it once a real account exists.",
-      );
+  constructor({
+    endpoint = process.env.CLIQUE_ENDPOINT,
+    trustedEnclaves = parseCsv(process.env.CLIQUE_TRUSTED_ENCLAVES),
+    trustedSigners = parseCsv(process.env.CLIQUE_TRUSTED_SIGNERS),
+    allowedHosts = parseCsv(process.env.CLIQUE_TLS_ALLOWED_HOSTS),
+    clientFactory = (config) => new CliqueSdkClient(config),
+  } = {}) {
+    if (!endpoint) throw new NotConfiguredError("Set CLIQUE_ENDPOINT to the Clique Network endpoint");
+    const endpointUrl = new URL(endpoint);
+    if (endpointUrl.protocol !== "https:" && !["localhost", "127.0.0.1", "::1"].includes(endpointUrl.hostname)) {
+      throw new NotConfiguredError("CLIQUE_ENDPOINT must use HTTPS (HTTP is allowed only for a loopback endpoint)");
     }
+    this.allowedHosts = allowedHosts.map((host) => host.toLowerCase());
+    if (this.allowedHosts.length === 0) throw new NotConfiguredError("Set CLIQUE_TLS_ALLOWED_HOSTS to an exact host allowlist");
+    this.client = clientFactory({
+      endpoint: endpointUrl.toString().replace(/\/$/, ""),
+      pollingInterval: 500,
+      retryNumber: 5,
+      timeout: 60_000,
+      allowExistQuery: false,
+      trustedEnclaves: requireMeasurements("CLIQUE_TRUSTED_ENCLAVES", trustedEnclaves),
+      trustedSigners: requireMeasurements("CLIQUE_TRUSTED_SIGNERS", trustedSigners),
+    });
   }
 
-  /** Prove arbitrary off-chain TLS session data via Clique's TLS Oracle. */
-  async proveTlsSession(_request) {
-    this.#requireConfigured();
-    throw new Error("TODO: wire to Clique TLS Oracle (@cliqueofficial/clique-client-sdk-node)");
+  /** Query a read-only HTTPS JSON endpoint and return the SDK-verified proof. */
+  async proveTlsSession({ url, encoding }) {
+    const request = validateRequest({ url, encoding, allowedHosts: this.allowedHosts });
+    const response = await this.client.runQuery({
+      id: randomInt(1, 2 ** 31),
+      method: "clique_httpsRequest",
+      params: request,
+      inputTypes: { url: "string", encoding: "Transformation[]" },
+      customTypes: { Transformation: { from: "string", soltype: "string" } },
+    });
+    if (!response?.attestation || !response?.signature || !response?.result) {
+      throw new Error("Clique SDK returned an incomplete verified response");
+    }
+    return {
+      verification: "clique-sdk-verified",
+      request,
+      result: response.result,
+      attestation: response.attestation,
+      signature: response.signature,
+    };
   }
 
-  /** Place an order on Hyperliquid via Clique Wallet's multi-chain custody. */
-  async placeClobOrder(_order) {
-    this.#requireConfigured();
-    throw new Error("TODO: wire to Clique Wallet REST API (Hyperliquid order placement)");
+  async placeClobOrder() {
+    throw new Error("Clique Wallet trading is not implemented by this read-only adapter");
   }
 
-  async cancelClobOrder(_orderId) {
-    this.#requireConfigured();
-    throw new Error("TODO: wire to Clique Wallet REST API (Hyperliquid order cancellation)");
+  async cancelClobOrder() {
+    throw new Error("Clique Wallet trading is not implemented by this read-only adapter");
   }
 
-  async getBalances(_chain) {
-    this.#requireConfigured();
-    throw new Error("TODO: wire to Clique Wallet REST API (balances per chain)");
+  async getBalances() {
+    throw new Error("Clique Wallet access is not implemented by this read-only adapter");
   }
 }
 

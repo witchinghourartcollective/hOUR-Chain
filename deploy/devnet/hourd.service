@@ -1,0 +1,43 @@
+[Unit]
+Description=hOUR Chain private development node
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+StartLimitIntervalSec=1h
+StartLimitBurst=2
+
+[Service]
+Type=simple
+User=hourd
+Group=hourd
+Environment=HOME=/var/lib/hourd-data
+Environment=GOMEMLIMIT=512MiB
+Environment=GOGC=50
+WorkingDirectory=/var/lib/hourd-data
+ExecStart=/usr/local/bin/hourd start --pruning default --log_level info --minimum-gas-prices=0ahbc --evm.min-tip=0 --home /var/lib/hourd-data --api.enable --json-rpc.address 100.76.58.84:8545 --json-rpc.enable --chain-id hour_9000-1
+Restart=on-failure
+RestartSec=60s
+TimeoutStopSec=60
+LimitNOFILE=65536
+CPUQuota=50%
+CPUWeight=20
+Nice=10
+IOSchedulingClass=idle
+MemoryHigh=640M
+MemoryMax=768M
+MemorySwapMax=256M
+OOMPolicy=stop
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/lib/hourd-data
+
+[Install]
+WantedBy=multi-user.target

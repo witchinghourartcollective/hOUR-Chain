@@ -10,10 +10,74 @@ import {
   buildRoyaltySettlementEvent,
 } from "../src/index.mjs";
 
-test("CliqueClient throws NotConfiguredError without credentials", async () => {
-  const client = new CliqueClient({ apiKey: undefined, walletId: undefined });
-  await assert.rejects(() => client.placeClobOrder({}), NotConfiguredError);
-  await assert.rejects(() => client.getBalances("solana"), NotConfiguredError);
+const measurement = "a".repeat(64);
+
+test("CliqueClient requires a pinned endpoint, attestation roots, and host allowlist", () => {
+  assert.throws(() => new CliqueClient({ endpoint: undefined }), NotConfiguredError);
+  assert.throws(() => new CliqueClient({
+    endpoint: "https://clique.example",
+    trustedEnclaves: [],
+    trustedSigners: [measurement],
+    allowedHosts: ["jsonplaceholder.typicode.com"],
+  }), NotConfiguredError);
+});
+
+test("CliqueClient submits a read-only TLS query with pinned verifier roots", async () => {
+  let clientConfig;
+  let query;
+  const client = new CliqueClient({
+    endpoint: "https://clique.example/",
+    trustedEnclaves: [measurement],
+    trustedSigners: [measurement],
+    allowedHosts: ["jsonplaceholder.typicode.com"],
+    clientFactory: (config) => {
+      clientConfig = config;
+      return { runQuery: async (value) => {
+        query = value;
+        return {
+          attestation: { id: "proof-1" },
+          signature: "verified-signature",
+          result: { response: "0x1234" },
+        };
+      } };
+    },
+  });
+  const proof = await client.proveTlsSession({
+    url: "https://jsonplaceholder.typicode.com/users",
+    encoding: [{ from: "/0/id", soltype: "uint32" }],
+  });
+
+  assert.deepEqual(clientConfig.trustedEnclaves, [measurement]);
+  assert.deepEqual(clientConfig.trustedSigners, [measurement]);
+  assert.equal(clientConfig.allowExistQuery, false);
+  assert.equal(query.method, "clique_httpsRequest");
+  assert.equal(query.params.url, "https://jsonplaceholder.typicode.com/users");
+  assert.equal(query.inputTypes.encoding, "Transformation[]");
+  assert.deepEqual(proof.result, { response: "0x1234" });
+  assert.equal(proof.verification, "clique-sdk-verified");
+});
+
+test("CliqueClient rejects unapproved hosts, credentials, and non-TLS endpoints", async () => {
+  const client = new CliqueClient({
+    endpoint: "https://clique.example",
+    trustedEnclaves: [measurement],
+    trustedSigners: [measurement],
+    allowedHosts: ["jsonplaceholder.typicode.com"],
+    clientFactory: () => ({ runQuery: async () => { throw new Error("must not query"); } }),
+  });
+  await assert.rejects(() => client.proveTlsSession({
+    url: "https://other.example/data",
+    encoding: [{ from: "/value", soltype: "string" }],
+  }), /not allowlisted/);
+  await assert.rejects(() => client.proveTlsSession({
+    url: "https://user:password@jsonplaceholder.typicode.com/users",
+    encoding: [{ from: "/0/id", soltype: "uint32" }],
+  }), /credentials/);
+  await assert.rejects(() => client.proveTlsSession({
+    url: "http://jsonplaceholder.typicode.com/users",
+    encoding: [{ from: "/0/id", soltype: "uint32" }],
+  }), /must use HTTPS/);
+  await assert.rejects(() => client.placeClobOrder({}), /not implemented/);
 });
 
 test("SUPPORTED_CHAINS matches ADR-0006 scope", () => {

@@ -82,11 +82,19 @@ Node SDK: [`@cliqueofficial/clique-client-sdk-node`](https://www.npmjs.com/packa
   attestation), parallel to, not replacing, its post-quantum signature
   profile (ADR-0002) — Clique attestations cover *off-chain data provenance*,
   not *on-chain authorization*, which stays ML-DSA/SLH-DSA signed per ADR-0002.
-- Nothing is deployed yet: this ADR authorizes building a `clique-adapter`
-  package and wiring scaffolds into `witching-hour-app` and
-  `witching-hour-token`, pending a real Clique account, API credentials, and
-  a funded Hyperliquid account. Those wiring points are scaffolded with clear
-  TODOs rather than fabricated working integrations.
+- `packages/clique-adapter` now has a **read-only TLS Oracle prototype** using
+  the official Node SDK. It requires explicit trusted enclave and signer
+  measurement allowlists and an exact HTTPS host allowlist. Clique Wallet
+  balance and order methods remain unavailable in this adapter.
+- No live Clique endpoint was configured or queried during the prototype
+  work. The adapter's mocked tests prove query construction and fail-closed
+  configuration only; they do not prove Clique service access, production
+  attestation, or on-chain integration. Before a live query, configure a
+  verified endpoint and independently confirm the trusted measurement values.
+- Wire event envelopes to the platform only after a real SDK-verified TLS
+  response has been captured and its freshness, replay, and schema rules are
+  specified. The returned event helpers are payload builders, not settlement
+  authorization.
 
 ## Open questions
 

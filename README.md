@@ -41,7 +41,9 @@ What exists today:
 - `SPEC.md`, `TRUST-MODEL.md`, `THREAT-MODEL.md` — protocol specification and security model.
 - `specs/` — canonical event-envelope schema, signature-suite registry, conformance check, and the first-release fixture template.
 - `packages/pqc-profile/` — reference implementation of the PQC signing profile: canonical signing bytes, ML-DSA-65 and SLH-DSA-SHA2-128s sign/verify, and fail-closed suite/version checks.
+- `packages/clique-adapter/` — read-only Clique TLS Oracle prototype; trading and wallet operations are intentionally unavailable.
 - `chain/` — Cosmos EVM node scaffold (`hourd`) and single-node devnet.
+- `docs/GENESIS-DECISION-GATE.md` and `docs/DEVNET-OPERATIONS.md` — token/validator/PQC launch gates and private devnet operating controls.
 - `docs/` — architecture decisions, signature canonicalization, first-release pilot, funding, and cloud-cost baseline.
 - `site/` — the mirrorizm.com landing page and its Shopify section.
 
