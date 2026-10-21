@@ -300,22 +300,65 @@ passes end-to-end — sign/verify, `PubKeyToProto`/`FromProto` round-trip,
 round-trip (not just an in-memory one, which would have missed a
 hand-patching mistake in the generated code).
 
-**Not yet started**, still required before any real validator could run
-on an `mldsa65` consensus key:
-- The parallel cosmos-sdk switch,
-  `crypto/codec.FromCmtProtoPublicKey`/`ToCmtProtoPublicKey`
-  (`cosmos-sdk@v0.54.3`), plus a new `crypto/keys/mldsa65` package there
-  (its own proto `Any` type + `cryptotypes.PubKey` impl, mirroring the
-  existing `crypto/keys/bls12_381` package as a template).
-- `privval.FilePV`'s key generation (`GenFilePV` hardcodes
-  `ed25519.GenPrivKey()`) needs a key-type-selectable variant.
+**cosmos-sdk side also landed, 2026-10-21** — fork at
+`github.com/witchinghourartcollective/cosmos-sdk`, branch
+`mldsa65-consensus` (PR not yet opened,
+https://github.com/witchinghourartcollective/cosmos-sdk/pull/new/mldsa65-consensus),
+with a matching `replace` of the cometbft dependency onto this project's
+own fork above (real GitHub-resolved pseudo-version, kept bumped to the
+latest commit there). Landed:
+- `proto/cosmos/crypto/mldsa65/keys.proto` +
+  `crypto/keys/mldsa65/keys.pb.go`: new standalone `PubKey`/`PrivKey`
+  proto messages, mirroring `crypto/keys/bls12_381`'s shape. Same
+  hand-patched-not-regenerated caveat as the cometbft side.
+- `crypto/keys/mldsa65/mldsa65.go`: `cryptotypes.PubKey`/`PrivKey` +
+  `codec.AminoMarshaler` implementation, mirroring `crypto/keys/ed25519`'s
+  always-on pattern (ML-DSA-65 is pure Go — no cgo build-tag gate needed,
+  unlike `bls12_381`).
+- `crypto/codec/cmt.go`: added the `mldsa65` case to the previously-closed
+  `FromCmtProtoPublicKey`/`ToCmtProtoPublicKey` switches.
+- `crypto/codec/proto.go`: registered `mldsa65.PubKey`/`PrivKey` as
+  `Any`-packable implementations of `cryptotypes.PubKey`/`PrivKey` — this
+  is the actual mechanism `x/staking`'s `MsgCreateValidator` uses for its
+  validator pubkey field (confirmed with a real
+  `registry.UnpackAny` round-trip test, not just an in-memory assertion).
+
+Both forks' full modules build clean together on `whm-lnd-cloud`
+(go1.25.3), and this package's tests pass end-to-end too: sign/verify,
+`ToCmtProtoPublicKey`/`FromCmtProtoPublicKey` round-trip, a full
+`ToCmtPubKeyInterface`/`FromCmtPubKeyInterface` round-trip through both
+forks together, a real proto wire marshal/unmarshal round-trip, and the
+`registry.UnpackAny` test above.
+
+**Two more real gaps found by actually tracing the validator-creation
+path (not just reading docs), both now closed:**
+- `privval.FilePV`'s key generation turned out to **not** need a patch —
+  `NewFilePV(privKey crypto.PrivKey, ...)` was already fully generic;
+  only the convenience wrapper `GenFilePV()` hardcodes
+  `ed25519.GenPrivKey()`. Proven with a real JSON save/load round-trip
+  test (`privval/mldsa65_filepv_test.go`): `hourd init` can just call
+  `privval.NewFilePV(mldsa65.GenPrivKey(), ...)` directly, no cometbft
+  core patch needed for this piece.
+- `x/staking`'s `MsgCreateValidator` handler (traced directly in
+  `x/staking/keeper/msg_server.go`) checks the declared pubkey's
+  `Type()` against the **live consensus params**'
+  `Validator.PubKeyTypes` list — and CometBFT's own
+  `ConsensusParams.ValidateBasic` separately rejects any
+  `PubKeyTypes` entry not present in the closed
+  `types.ABCIPubKeyTypesToNames` map with "is an unknown pubkey type".
+  This *was* a real, necessary patch (`types/params.go`, cometbft fork)
+  — without it, a fresh genesis listing `"mldsa65"` in
+  `consensus.params.validator.pub_key_types` would fail validation
+  before the chain could even start. Patched and verified with a real
+  `ConsensusParams.ValidateBasic` call against an `mldsa65`-only
+  `PubKeyTypes` list.
+
+**Still not started** — the only remaining piece, and it's
+infrastructure/process, not code:
 - A **fresh devnet genesis** bringing up a validator with an `mldsa65`
-  consensus key from block 0 — mid-chain consensus-key *type* swap is
+  consensus key from block 0. Mid-chain consensus-key *type* swap is
   not a solved problem in this stack regardless of which key type is
   involved, so this can't be retrofitted onto the existing devnet's
-  validator.
-- `x/staking`'s `MsgCreateValidator` validation has no pubkey-type
-  allow-list in this cosmos-sdk version (checked directly in
-  `x/staking/types/validator.go`) — one less patch point than expected,
-  but worth re-checking once the cosmos-sdk-side package actually
-  exists and is registered in the app's interface registry.
+  validator — it needs its own chain-id/genesis, which is a bigger,
+  more infra-disruptive step than anything above and deserves a
+  deliberate go-ahead before starting.
