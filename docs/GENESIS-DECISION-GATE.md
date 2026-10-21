@@ -262,4 +262,60 @@ signing/verification is a plain Go interface; `cloudflare/circl@v1.5.0`'s
 `SIGNATURE-CANONICALIZATION.md` and needs no toolchain bump). The real
 cost is maintaining this as a permanent fork: light clients, explorers,
 and any tooling built against stock CometBFT won't understand the new
-pubkey type without the same patch. Not started.
+pubkey type without the same patch.
+
+**CometBFT side started, 2026-10-21** — fork at
+`github.com/witchinghourartcollective/cometbft`, branch
+`mldsa65-consensus` (PR not yet opened,
+https://github.com/witchinghourartcollective/cometbft/pull/new/mldsa65-consensus).
+Landed:
+- `crypto/mldsa65` (new): implements `crypto.PubKey`/`crypto.PrivKey` for
+  FIPS 204 ML-DSA-65 via `cloudflare/circl` (pinned direct to v1.5.0;
+  Go's MVS bumped the actual resolved version to v1.6.1 during build —
+  still `go 1.22.0`-compatible, no toolchain-bump issue).
+- `proto/tendermint/crypto/keys.proto` / `keys.pb.go`: added
+  `PublicKey.mldsa65` as oneof field 4, alongside the existing
+  `ed25519`/`secp256k1`/`bls12381`. `keys.pb.go` was **hand-patched**,
+  not regenerated — no `buf`/`protoc-gen-gogofaster` toolchain available
+  in the environment this was built in. The gzipped `FileDescriptor`
+  bytes are stale as a result; this only affects reflection/descriptor-
+  based introspection (e.g. grpc-reflection), not the actual
+  `Marshal`/`Unmarshal`/`Compare`/`Equal` methods consensus uses — but
+  run a real `make proto-gen` before trusting anything that depends on
+  the descriptor.
+- `crypto/encoding/codec.go`: added the `mldsa65` case to all three
+  previously-closed switches.
+- `types/signable.go`: `MaxSignatureSize` now accounts for ML-DSA-65's
+  3309-byte signature (vs Ed25519's 64 bytes — a real ~52x bandwidth
+  cost per vote/commit/proposal for any validator using this key type;
+  not yet evaluated at any real validator-set size).
+
+Verified for real on `whm-lnd-cloud` (go1.25.3, the toolchain this
+module's `go.mod` actually requires — this session's own sandbox only
+had go1.22.2 with no network to fetch 1.25, so verification had to
+happen on that droplet, not locally): `go build ./...` across the
+*entire* forked module succeeds, and `crypto/mldsa65`'s test suite
+passes end-to-end — sign/verify, `PubKeyToProto`/`FromProto` round-trip,
+`PubKeyFromTypeAndBytes`, and a real proto **wire** marshal/unmarshal
+round-trip (not just an in-memory one, which would have missed a
+hand-patching mistake in the generated code).
+
+**Not yet started**, still required before any real validator could run
+on an `mldsa65` consensus key:
+- The parallel cosmos-sdk switch,
+  `crypto/codec.FromCmtProtoPublicKey`/`ToCmtProtoPublicKey`
+  (`cosmos-sdk@v0.54.3`), plus a new `crypto/keys/mldsa65` package there
+  (its own proto `Any` type + `cryptotypes.PubKey` impl, mirroring the
+  existing `crypto/keys/bls12_381` package as a template).
+- `privval.FilePV`'s key generation (`GenFilePV` hardcodes
+  `ed25519.GenPrivKey()`) needs a key-type-selectable variant.
+- A **fresh devnet genesis** bringing up a validator with an `mldsa65`
+  consensus key from block 0 — mid-chain consensus-key *type* swap is
+  not a solved problem in this stack regardless of which key type is
+  involved, so this can't be retrofitted onto the existing devnet's
+  validator.
+- `x/staking`'s `MsgCreateValidator` validation has no pubkey-type
+  allow-list in this cosmos-sdk version (checked directly in
+  `x/staking/types/validator.go`) — one less patch point than expected,
+  but worth re-checking once the cosmos-sdk-side package actually
+  exists and is registered in the app's interface registry.
