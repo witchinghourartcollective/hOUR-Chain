@@ -1,0 +1,25 @@
+{
+  "chainId": 9000,
+  "chainIdHex": "0x2328",
+  "network": "hour-devnet (whm-lnd-cloud, via DeployF1600Helper.s.sol / DeployDilithium65.s.sol in ZKNoxHQ/ETHDILITHIUM branch mldsa-65)",
+  "deployer": "0xc6fe5d33615a1c52c08018c47e8bc53646a0e101",
+  "note": "Faucet-only devnet key (HOURCHAIN_PRIVATE_KEY in witching-hour-token/.env), zero real value -- same key already used for the WrappedHour bridge deployment (ADR-0007).",
+  "contracts": {
+    "F1600Helper": {
+      "address": "0x07Aa076883658B7ED99D25b1E6685808372C8fE2",
+      "txHash": "0x4c8a3e22da8e7dc44c7959ef138de87f57f12d915226f8fedd0c8e64b26b0a30",
+      "block": 89879,
+      "deployedAt": "2026-10-20",
+      "purpose": "Keccak-f[1600] helper bound by code hash from ZKNOX_dilithium65.sol -- deployed once per chain."
+    },
+    "ZKNOX_dilithium65": {
+      "address": "0xe2F81B30E1D47DFFdBb6aB41Ec5f0572705b026d",
+      "txHash": "0xac5d6a7dd7347792f055b3f67a29c81870d6742992eda326ba6ea88498dfc02b",
+      "block": 89967,
+      "deployedAt": "2026-10-20",
+      "purpose": "FIPS 204 ML-DSA-65 (k=6, l=5) on-chain verifier, ZKNoxHQ/ETHDILITHIUM branch mldsa-65. Deployed via plain CREATE (not the script's default CREATE2 -- the devnet has no deterministic-deployer-proxy singleton at 0x4e59b448..., unlike Base/Ethereum). The script's bundled on-chain self-check (writing a demo NIST KAT key via setKey, then verify) confirmed `NIST KAT verification: true` in local simulation before broadcast, but the broadcast of that follow-up setKey call itself failed on this devnet with a RPC-reported 'exceeds block gas limit' error -- NOT because the real cost is too high (a direct `cast estimate` of setKey with a correctly-sized ~40,320-byte expanded-key blob came back at 8,446,329 gas, under the devnet's 10,000,000 gas limit) but consistent with the already-documented cosmos/evm auto-gas-estimation bug in ADR-0007 (eth_fillTransaction simulates against genesis state, where a just-deployed contract doesn't exist yet). Real setKey/verify calls against this contract should pass an explicit --gas-limit rather than relying on auto-estimation, same guidance as ADR-0007 already gives for any EVM write against this chain."
+    }
+  },
+  "interfaceNote": "setKey's `pubkey` parameter is NOT the raw ~1952-byte FIPS 204 ML-DSA-65 public key -- it is the pre-expanded (A_hat || t1 || tr) blob, ~40,320 bytes, produced off-chain by ETHDILITHIUM's own js/mldsa65.js from the raw public key. contracts/pqc/IMlDsa65Verifier.sol in the account-abstraction fork's pqc-account branch currently documents this incorrectly as the raw key; fix that comment before anyone relies on it.",
+  "warning": "ZKNOX_dilithium65 is explicitly marked experimental and unaudited by its own authors (\"DO NOT USE IN PRODUCTION, LOSS OF FUNDS WILL OCCUR\", ZKNoxHQ/ETHDILITHIUM README, mldsa-65 branch, 2026-09-16 commit). This devnet deployment passed its own NIST KAT/ACVP test suite (22/22) when run locally before deployment, and the deployed bytecode itself passed a real on-chain NIST KAT check during the deploy script's local simulation. That is still not an independent audit. Devnet-only; do not point PqcAccountFactory's verifier at an equivalent deployment on Base or any chain carrying real value without a real audit first."
+}

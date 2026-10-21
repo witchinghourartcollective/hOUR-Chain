@@ -163,18 +163,49 @@ still missing and gates any public testnet:
    on its `mldsa-65` branch specifically (its default `main` branch is
    ML-DSA-44, k=4/l=4, a different and lower NIST security category —
    do not confuse the two). That contract has its own Foundry project,
-   its own KAT/ACVP test vectors, and is explicitly marked
-   "experimental, not audited: DO NOT USE IN PRODUCTION, LOSS OF FUNDS
-   WILL OCCUR" by its own authors as of the 2026-09-16 commit. This
-   session could not install Foundry to build/test/deploy it — the
-   sandbox's auto-mode classifier blocked running `foundryup` as
-   untrusted external code, correctly, and that wasn't worked around.
-   Deploying and wiring the real verifier (on hOUR Chain's own EVM, or
-   Base for the bridge signers) needs either an environment where
-   Foundry is already available, or a custom ML-DSA precompile on hOUR
-   Chain's `cosmos/evm` backport instead (cheaper gas, and ours to
-   write/review rather than relying on someone else's unaudited
-   verifier) — still not built either way.
+   its own KAT/ACVP test vectors (22/22 pass when run locally, including
+   the real NIST ML-DSA-65 known-answer and ACVP vectors), and is
+   explicitly marked "experimental, not audited: DO NOT USE IN
+   PRODUCTION, LOSS OF FUNDS WILL OCCUR" by its own authors as of the
+   2026-09-16 commit.
+
+   **Deployed to the devnet, 2026-10-20** (Fletcher ran the broadcasts
+   himself, after this session's sandbox correctly blocked both
+   installing Foundry and broadcasting transactions on its own — see
+   `deploy/devnet/pqc-verifier-deployments.json` for full addresses/tx
+   hashes):
+   - `F1600Helper` (the Keccak-f[1600] helper `ZKNOX_dilithium65` binds
+     to by code hash): `0x07Aa076883658B7ED99D25b1E6685808372C8fE2`.
+   - `ZKNOX_dilithium65`: `0xe2F81B30E1D47DFFdBb6aB41Ec5f0572705b026d`
+     (block 89967). Deployed via plain `CREATE`, not the script's
+     default `CREATE2` — the devnet has no deterministic-deployer-proxy
+     singleton at `0x4e59b448...` the way Base/Ethereum do.
+   - The on-chain self-check confirmed `NIST KAT verification: true` in
+     local simulation before broadcast. The follow-up broadcast of that
+     same check (writing a demo key via `setKey`) failed on this devnet
+     with an "exceeds block gas limit" RPC error — not because the real
+     cost is too high (`cast estimate` of `setKey` with a correctly-sized
+     ~40,320-byte expanded-key blob: 8,446,329 gas, under the devnet's
+     10,000,000 limit) but consistent with the `cosmos/evm`
+     auto-gas-estimation bug ADR-0007 already documents (estimates
+     simulate against genesis state, where a just-deployed contract
+     doesn't exist). Real `setKey`/`verify` calls need an explicit
+     `--gas-limit`, not auto-estimation, same as any EVM write against
+     this chain.
+   - **Interface correction**: `setKey`'s `pubkey` parameter is the
+     *pre-expanded* (`A_hat || t1 || tr`) blob, ~40,320 bytes — not the
+     raw ~1952-byte FIPS 204 public key. `IMlDsa65Verifier.sol` on the
+     `account-abstraction` fork's `pqc-account` branch currently
+     documents this wrong; fix that comment before anyone relies on it.
+
+   `PqcAccountFactory` is built and tested but not yet deployed anywhere
+   or pointed at this verifier address — that's the next step, and it's
+   a vanilla contract deploy of our own code (not third-party bytecode),
+   so it may not hit the same broadcast friction this session saw.
+   For Base-mainnet bridge signers specifically, a custom ML-DSA
+   precompile on hOUR Chain's own `cosmos/evm` backport remains the
+   better long-term answer regardless (cheaper gas, ours to
+   write/review) — still not built.
 3. ADR-0002's own follow-up list (benchmark PQC costs, independent
    cryptographic review) is still open.
 
