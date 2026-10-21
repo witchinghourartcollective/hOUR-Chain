@@ -195,13 +195,28 @@ still missing and gates any public testnet:
    - **Interface correction**: `setKey`'s `pubkey` parameter is the
      *pre-expanded* (`A_hat || t1 || tr`) blob, ~40,320 bytes — not the
      raw ~1952-byte FIPS 204 public key. `IMlDsa65Verifier.sol` on the
-     `account-abstraction` fork's `pqc-account` branch currently
-     documents this wrong; fix that comment before anyone relies on it.
+     `account-abstraction` fork's `pqc-account` branch now documents
+     this correctly (fixed 2026-10-20).
 
-   `PqcAccountFactory` is built and tested but not yet deployed anywhere
-   or pointed at this verifier address — that's the next step, and it's
-   a vanilla contract deploy of our own code (not third-party bytecode),
-   so it may not hit the same broadcast friction this session saw.
+   **Real account created and validated end-to-end, 2026-10-21.**
+   `EntryPoint` and `PqcAccountFactory` deployed (plain `CREATE`, same
+   no-deterministic-deployer-proxy reason as above):
+   `EntryPoint` `0x20c3620358921b0631B2c3e2F72A905A6246cF91`,
+   `PqcAccountFactory` `0x846A221D5d86A5c4fFbb1B64d3a5015714D19AE4`.
+   A real `PqcAccount` (`0x716F45e9De84C0b40291a14fba9421d50c33a975`)
+   was created via a real signed `UserOperation` — real ML-DSA-65
+   keypair, real `handleOps` broadcast
+   (`0x6882c00e3c3a010cd09c8af0feb9a8a686c8e41966d9c1ae8204edd57e7341a3`,
+   status 1, 141-byte deployed proxy code) — against the live devnet's
+   real deployed verifier, not a mock. Full details, including the two
+   root causes that had to be fixed first (the devnet's genesis-pinned
+   EVM gas ceiling, and UserOp prefund under-funding), in
+   `deploy/devnet/pqc-verifier-deployments.json`'s `pqcAccountCreation`
+   entry. Run directly on `whm-lnd-cloud` itself (scripts/artifacts
+   synced over SSH, executed against the box's own local Tailscale RPC)
+   — no desktop SSH tunnel involved, since this session's sandbox can
+   reach that droplet directly.
+
    For Base-mainnet bridge signers specifically, a custom ML-DSA
    precompile on hOUR Chain's own `cosmos/evm` backport remains the
    better long-term answer regardless (cheaper gas, ours to
