@@ -434,3 +434,24 @@ touched. Live confirmation: `validator_info.address` and the block
 (`529A0567B7B32E68E58A08D63405BE9ABDFF103B`), and `/commit` shows a
 real 3309-byte signature — Ed25519 is no longer used for consensus on
 this chain at all.
+
+**One real bug hit and fixed during the swap**: the first attempt
+reset `app_state.slashing.signing_infos`/`missed_blocks` to `[]`
+(reasoning at the time: the old entries were keyed by the *old*
+Ed25519 consensus address, so they'd be orphaned anyway). That was
+wrong — `x/slashing` requires a `signing_info` entry for every bonded
+validator, and an empty array caused a hard `CONSENSUS FAILURE!!!
+error="failed to apply block; error no validator signing info found"`
+at height 2 (the first height whose `BeginBlock` processes the prior
+block's votes). The panic killed the consensus `receiveRoutine`
+goroutine specifically, not the whole process — `systemctl status`
+kept reporting `active (running)` the entire time, making it look
+healthy while the chain was actually a stalled zombie. Fixed by
+computing the new validator's `cosmosvalcons...` address
+(`cosmosvalcons122dq2eahkvhx3ev2prtrgpd7n27l7ypm33pksg`, via
+`sdk.ConsAddress` — cosmos-sdk's own `debug addr`/`debug pubkey` CLI
+commands don't print the valcons form, only acc/valoper) and giving it
+a real `signing_info` entry before re-swapping. Lesson: when migrating
+genesis state across a consensus-key change, don't reset
+address-keyed per-validator state to empty — give it a correct entry
+under the *new* address instead.
