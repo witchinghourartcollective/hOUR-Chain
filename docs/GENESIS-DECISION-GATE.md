@@ -353,12 +353,69 @@ path (not just reading docs), both now closed:**
   `ConsensusParams.ValidateBasic` call against an `mldsa65`-only
   `PubKeyTypes` list.
 
-**Still not started** — the only remaining piece, and it's
-infrastructure/process, not code:
-- A **fresh devnet genesis** bringing up a validator with an `mldsa65`
-  consensus key from block 0. Mid-chain consensus-key *type* swap is
-  not a solved problem in this stack regardless of which key type is
-  involved, so this can't be retrofitted onto the existing devnet's
-  validator — it needs its own chain-id/genesis, which is a bigger,
-  more infra-disruptive step than anything above and deserves a
-  deliberate go-ahead before starting.
+**Fresh devnet genesis: done and proven live, 2026-10-22.** A real,
+isolated single-validator chain (`hour-pqc-test-1`, built and run on
+`whm-lnd-cloud` at distinct ports, never touching the live devnet's
+process, ports, or data) came up and produced real blocks whose
+**consensus commit signatures are genuinely 3309 bytes** — the real
+ML-DSA-65 signature size, not Ed25519's 64. Confirmed via the live
+node's own RPC (`/status` showing `catching_up: false` and the
+validator's address matching the generated `mldsa65` key; `/commit`
+showing the 3309-byte signature) and its log (real `received
+proposal`/`finalizing commit of block`/`committed state` lines at
+increasing heights, proposed by that same validator address). This is
+the full 1b end target working, not just unit-tested in isolation.
+
+Two more real bugs were found and fixed getting here, beyond the
+crypto-type plumbing above:
+- `cosmos-sdk/crypto/keys/mldsa65`'s `fileDescriptor` was a placeholder
+  (`[]byte{}`), which I'd assumed only mattered for reflection-based
+  tooling. It actually broke real genesis bootstrapping: this app's
+  `app.go` enables `SIGN_MODE_TEXTUAL`, which needs real protobuf
+  descriptor info to resolve `Any`-packed messages, and the placeholder
+  caused a genesis gentx carrying an `mldsa65` validator pubkey to fail
+  with an opaque `"EOF: tx parse error"` deep inside baseapp's
+  `DeliverTx`. Found by bisecting against an otherwise-identical
+  Ed25519 control genesis that bootstrapped fine with the same
+  placeholder-descriptor pattern unused. Fixed by generating a real
+  descriptor with plain `protoc --descriptor_set_out --include_imports`
+  (no `buf`/`protoc-gen-gogofaster` needed for just this part) and
+  splicing the extracted, gzipped `FileDescriptorProto` in — matching
+  the hand-written Marshal/Unmarshal code that was already correct.
+- `cosmos/evm` uses `AttoPowerReduction` (1e18, matching 18-decimal EVM
+  tokens) as the real consensus-power divisor — not the
+  `sdk.DefaultPowerReduction` (1,000,000) printed in a misleadingly
+  generic cosmos-sdk error message ("validator set is empty... please
+  ensure at least one validator is initialized with a delegation
+  greater than or equal to the DefaultPowerReduction"). Self-delegating
+  amounts well below 1e18 silently rounded down to zero consensus
+  power via integer division, so the validator never entered the
+  active set — nothing to do with ML-DSA at all once found, but cost
+  real time to diagnose precisely because the error text points at the
+  wrong constant. Confirmed directly by a temporary debug patch in
+  `ApplyAndReturnValidatorSetUpdates` showing `powerReduction =
+  1000000000000000000` and the validator's computed `consPower = 0` at
+  5e16 tokens; fixed by self-delegating 5e18.
+
+Both repos' branches: pushed and up to date as of this entry —
+`witchinghourartcollective/cometbft@mldsa65-consensus` and
+`witchinghourartcollective/cosmos-sdk@mldsa65-consensus`.
+
+**What's left before this could matter for anything beyond a
+proof-of-concept devnet:**
+- A real `make proto-gen`/`buf generate` pass to replace every
+  hand-patched generated file with properly toolchain-generated ones
+  (the hand patches are verified correct by tests, but hand-patching
+  generated code is not a sustainable practice for a real fork).
+- The ~52x signature-size bandwidth cost (3309 vs 64 bytes per vote/
+  commit/proposal) has only been exercised at single-validator scale;
+  not evaluated for a real multi-validator set.
+- No independent cryptographic review of this integration (separate
+  from ADR-0002's existing ask for a review of the ML-DSA-65 *scheme*
+  itself, via `cloudflare/circl`).
+- Migrating the live devnet (or a real environment) onto this fork
+  would mean replacing its `chain/go.mod` replace directives — not
+  done, and intentionally not attempted this session; the isolated
+  `hour-pqc-test-1` chain used its own copy of the `chain/` module with
+  its own replace directives, specifically so the live devnet was never
+  at risk.
