@@ -380,4 +380,9 @@ replace (
 	// all estimate gas against genesis in SetTxDefaults, causing silent out-of-gas reverts
 	// on any contract call. Drop this replace once #1325 merges and a v0.7.4+ tag ships it.
 	github.com/cosmos/evm => github.com/witchinghourartcollective/evm v1.0.0-rc2.0.20261015213201-071b0a73b67e
+	// hOUR Chain fork: adds ML-DSA-65 (FIPS 204) as a consensus pubkey type,
+	// replacing Ed25519 for validator consensus signing. See
+	// docs/GENESIS-DECISION-GATE.md "1b" and branch mldsa65-consensus on both forks.
+	github.com/cometbft/cometbft => github.com/witchinghourartcollective/cometbft v0.39.4-0.20261021205010-6fe9742a1098
+	github.com/cosmos/cosmos-sdk => github.com/witchinghourartcollective/cosmos-sdk v0.54.4-0.20261022174118-9fb7ad2a609c
 )

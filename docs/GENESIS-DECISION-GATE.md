@@ -413,9 +413,24 @@ proof-of-concept devnet:**
 - No independent cryptographic review of this integration (separate
   from ADR-0002's existing ask for a review of the ML-DSA-65 *scheme*
   itself, via `cloudflare/circl`).
-- Migrating the live devnet (or a real environment) onto this fork
-  would mean replacing its `chain/go.mod` replace directives — not
-  done, and intentionally not attempted this session; the isolated
-  `hour-pqc-test-1` chain used its own copy of the `chain/` module with
-  its own replace directives, specifically so the live devnet was never
-  at risk.
+**Live devnet migrated, 2026-10-22.** `chain/go.mod`'s `cometbft`/
+`cosmos-sdk` replace directives now permanently point at the
+`mldsa65-consensus` fork branches (same commits proven on the isolated
+`hour-pqc-test-1` chain above). The real `hour_9000-1` devnet on
+`whm-lnd-cloud` was migrated in place via `deploy/devnet/migrate-to-mldsa65.sh`:
+`hourd export --for-zero-height` to dump the full application state
+(every contract, every balance, the bridge vault, the PQC verifier —
+everything), spliced a fresh `mldsa65` validator into that exported
+state (new key, same operator address, same token/commission/status
+fields), reset `consensus.params.validator.pub_key_types` to
+`["mldsa65"]`, and restarted the service on the new binary + genesis.
+**Nothing was lost** — confirmed post-migration via `eth_getCode` on
+the `ZKNOX_dilithium65` verifier address (bytecode intact) and
+`eth_getBalance` on the deployer account (balance intact). The old
+binary and full pre-migration data directory were backed up to
+`/root/hourd-mldsa65-migration/` on the droplet before anything was
+touched. Live confirmation: `validator_info.address` and the block
+`proposer` both show the new key's address
+(`529A0567B7B32E68E58A08D63405BE9ABDFF103B`), and `/commit` shows a
+real 3309-byte signature — Ed25519 is no longer used for consensus on
+this chain at all.
