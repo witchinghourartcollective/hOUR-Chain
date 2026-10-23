@@ -136,6 +136,37 @@ Phase 2 (prep now, activate later) needs, before it can open:
 - Key rotation / incident recovery procedure for validator operators
   (ties into HBC-010, still an open tracking issue).
 
+**Fee/commission economics locked in, 2026-10-22**, via governance
+`MsgUpdateParams` proposals on the live devnet (same mechanism as the
+earlier block-gas-limit change) — not a code change, a live param
+update:
+- `x/feemarket.min_gas_price`: `0` → `1000000000` ahbc/gas (1
+  gwei-equivalent). Transactions are no longer free; `base_fee` floors
+  at this value going forward. (Proposal 5, passed.)
+- `x/staking.min_commission_rate`: `0%` → `5%` (matching Cosmos Hub's
+  own default), so a future open validator set can't race to zero
+  commission. (Proposal 7, passed.)
+- Slashing (5% double-sign, 1% downtime, 10-min jail, 100-block
+  window, 50% min-signed) and unbonding (21 days) were already
+  reasonable Cosmos defaults — left unchanged.
+- Both proposals needed two attempts: the devnet's `voting_period` is
+  only 30 seconds, so submit→vote needs to happen within one block or
+  two, not after an idle round-trip. The feemarket change also broke
+  the *next* proposal's flat `--fees` amount (it was computed against
+  the old, lower gas price) — a reminder that raising the gas-price
+  floor has to account for the chain's own future governance-tx fees,
+  not just user transactions.
+
+**"Admission criteria" and "validator-set governance" are not code**
+— nothing in this stack technically distinguishes a "permissioned"
+validator set from an open one; anyone who can sign a
+`MsgCreateValidator` can join today, same as any Cosmos chain. Phase
+1's "permissioned" property is enforced entirely by key custody (who
+actually has keys with funds to self-delegate), not by a chain
+parameter. "Opening" the network in Phase 2 means publishing the
+minimum self-delegation / commission expectations and handing out
+access — a written operating procedure, not a fork or an upgrade.
+
 ## PQ unblock plan
 
 What currently exists: an ML-DSA event-signature profile for protocol
