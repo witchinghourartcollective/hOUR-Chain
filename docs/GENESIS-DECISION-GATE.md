@@ -432,12 +432,43 @@ Both repos' branches: pushed and up to date as of this entry —
 `witchinghourartcollective/cometbft@mldsa65-consensus` and
 `witchinghourartcollective/cosmos-sdk@mldsa65-consensus`.
 
+**Real proto-gen done, 2026-10-27.** This sandbox previously lacked
+both a go1.25+ toolchain and network access to fetch one; both are now
+available (`GOTOOLCHAIN=auto` pulled go1.25.0 on demand). `buf` itself
+has a broken transitive dependency (`github.com/russross/blackfriday/v2`)
+across every version tried and could not be installed via `go install`,
+but `buf` is just an orchestrator — `protoc-gen-gogofaster` installed
+cleanly on its own, and plain `protoc` with the right `-I` include
+paths (gogoproto, the repo's own `amino.proto`, `/usr/include` for
+the well-known types) reproduces exactly what `buf generate` would
+have produced, for the two hand-patched files
+(`crypto/keys/mldsa65/keys.pb.go` on both forks,
+`proto/tendermint/crypto/keys.pb.go` on cometbft).
+
+Both regenerated files matched their hand-patched predecessors almost
+exactly — same real gzipped FileDescriptorProto, same logic, different
+code shape (the real generator's `if/else` Marshal pattern vs. the
+hand-adapted early-return one) — **except one real naming bug**: the
+real `protoc-gen-gogofaster` names the oneof case `PublicKey_Mldsa65`
+/ field `Mldsa65` (plain title-case of the proto field `mldsa65`), not
+`PublicKey_MlDsa65` / `MlDsa65` as the hand-written code had guessed.
+This broke three call sites across both forks
+(`cometbft/crypto/encoding/codec.go`,
+`cosmos-sdk/crypto/codec/cmt.go`, plus both packages' own test files)
+that `go build`/`go test` run in isolation didn't catch — only
+`go vet ./...` from the actual `chain/` app's module, which type-checks
+the full real import graph, surfaced the `cosmos-sdk/crypto/codec`
+bug. Lesson: verify forked generated-code changes from the real
+consuming app's build, not just the fork's own package tests.
+
+All fixed, tested, and pushed to both forks' `mldsa65-consensus`
+branches; `chain/go.mod`'s pins bumped to the new commits.
+Verified: `go build ./...` and `go vet ./...` both pass clean for the
+full `chain/` app against the new pins (not just the two forks'
+own package tests).
+
 **What's left before this could matter for anything beyond a
 proof-of-concept devnet:**
-- A real `make proto-gen`/`buf generate` pass to replace every
-  hand-patched generated file with properly toolchain-generated ones
-  (the hand patches are verified correct by tests, but hand-patching
-  generated code is not a sustainable practice for a real fork).
 - The ~52x signature-size bandwidth cost (3309 vs 64 bytes per vote/
   commit/proposal) has only been exercised at single-validator scale;
   not evaluated for a real multi-validator set.
