@@ -86,6 +86,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
 	github.com/cockroachdb/errors v1.13.0 // indirect
@@ -366,6 +367,16 @@ require (
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
+	// hOUR Chain fork: adds ML-DSA-65 (FIPS 204) as a consensus pubkey type,
+	// replacing Ed25519 for validator consensus signing. See
+	// docs/GENESIS-DECISION-GATE.md "1b" and branch mldsa65-consensus on both forks.
+	github.com/cometbft/cometbft => github.com/witchinghourartcollective/cometbft v0.39.4-0.20261027210213-dab026fe93b9
+	github.com/cosmos/cosmos-sdk => github.com/witchinghourartcollective/cosmos-sdk v0.54.4-0.20261027211654-c59650cbb3c1
+	// Pinned to our backport of upstream #1220 (merged to main, never backported to
+	// release/v0.7.x -- see cosmos/evm#1322, cosmos/evm#1325). v0.7.0/v0.7.1/v0.7.2/v0.7.3
+	// all estimate gas against genesis in SetTxDefaults, causing silent out-of-gas reverts
+	// on any contract call. Drop this replace once #1325 merges and a v0.7.4+ tag ships it.
+	github.com/cosmos/evm => github.com/witchinghourartcollective/evm v1.0.0-rc2.0.20261015213201-071b0a73b67e
 	// use Cosmos geth fork
 	// branch: release/1.17
 	github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v1.17.2-cosmos-0
@@ -375,14 +386,4 @@ replace (
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	// use btree fork for bstm
 	github.com/tidwall/btree => github.com/cosmos/btree v0.0.0-20250924232609-2c6195d95951
-	// Pinned to our backport of upstream #1220 (merged to main, never backported to
-	// release/v0.7.x -- see cosmos/evm#1322, cosmos/evm#1325). v0.7.0/v0.7.1/v0.7.2/v0.7.3
-	// all estimate gas against genesis in SetTxDefaults, causing silent out-of-gas reverts
-	// on any contract call. Drop this replace once #1325 merges and a v0.7.4+ tag ships it.
-	github.com/cosmos/evm => github.com/witchinghourartcollective/evm v1.0.0-rc2.0.20261015213201-071b0a73b67e
-	// hOUR Chain fork: adds ML-DSA-65 (FIPS 204) as a consensus pubkey type,
-	// replacing Ed25519 for validator consensus signing. See
-	// docs/GENESIS-DECISION-GATE.md "1b" and branch mldsa65-consensus on both forks.
-	github.com/cometbft/cometbft => github.com/witchinghourartcollective/cometbft v0.39.4-0.20261021205010-6fe9742a1098
-	github.com/cosmos/cosmos-sdk => github.com/witchinghourartcollective/cosmos-sdk v0.54.4-0.20261022174118-9fb7ad2a609c
 )
