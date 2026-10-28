@@ -467,11 +467,57 @@ Verified: `go build ./...` and `go vet ./...` both pass clean for the
 full `chain/` app against the new pins (not just the two forks'
 own package tests).
 
+**Multi-validator bandwidth cost proven, 2026-10-27.** Stood up a real
+4-validator devnet in an isolated sandbox directory (never touching the
+live devnet), `hour-pqc-multival_9001-1`, via manual `hourd init` +
+`pqc-multival-keygen` (a throwaway tool, `chain/cmd/pqc-multival-keygen`,
+generating a real ML-DSA-65 key per node with `privval.NewFilePV`
+*before* each gentx is signed) + `hourd genesis gentx` + `collect-gentxs`,
+all 4 validators running as separate local processes on loopback with
+distinct ports. Confirmed via a real `/commit` query at height 8: 3-of-4
+validators signed, each signature genuinely 3309 bytes, totaling 9,927
+bytes versus a 192-byte Ed25519-equivalent for the same 3 validators —
+**51.7x**, matching the single-validator-derived ~52x estimate almost
+exactly. Block production held at ~5s/block (the configured
+`timeout_commit`), no visible degradation at this scale.
+
+Real bugs hit and fixed getting a multi-validator network to boot at
+all (none specific to ML-DSA-65 — any multi-validator `testnet
+init-files` + custom genesis workflow on this app would hit these):
+- **Don't hand-patch an already-signed gentx's pubkey field.**
+  `SIGN_MODE_DIRECT` signs the exact serialized tx bytes; editing the
+  `pubkey` JSON post-signing (as the single-validator *migration*
+  script correctly did, since that's a live-state-export flow with no
+  signature to preserve) silently invalidates the gentx's outer
+  signature. For a *fresh* multi-validator genesis, swap in the real
+  ML-DSA-65 key first, then run `gentx` so it signs correctly from
+  the start.
+- `testnet init-files` writes `config/client.toml` with `chain-id =
+  ""`; this app's `start` command falls back to reading *that* file
+  for chain-id (not `genesis.json`) when `--chain-id` isn't bound via
+  viper for the `start` subcommand (it isn't, despite showing under
+  `--help`'s "Global Flags") — causing `error on replay: invalid
+  chain-id on InitChain; expected: , got: ...` on an otherwise-correct
+  genesis. Fix: set `chain-id` in each node's `client.toml` directly.
+- Bank `denom_metadata` for the EVM-coupled denom needs a base unit at
+  exponent 0 (SDK genesis validation requirement) *and* a display unit
+  at exponent 18 (what the EVM module actually checks) — one combined
+  entry at exponent 18 fails SDK validation; exponent 0 alone fails the
+  EVM module's decimals check.
+- The already-known `AttoPowerReduction` (1e18) pitfall applies to
+  gentx self-delegation amounts too, not just live re-delegation:
+  100000000stake (1e8) rounds to zero consensus power at 18 decimals,
+  producing `validator set is empty after InitGenesis`. Needed
+  self-delegations ≥1e18 to get real voting power.
+- Single-host multi-node CometBFT needs `allow_duplicate_ip = true`
+  (default `false` blocks more than one peer connection per IP) and
+  `addr_book_strict = false`, since all 4 nodes share `127.0.0.1`.
+  Without this, each node silently connects to only 1 of its 3
+  configured persistent peers and consensus never reaches a round
+  (no error, just permanently stuck at height 0).
+
 **What's left before this could matter for anything beyond a
 proof-of-concept devnet:**
-- The ~52x signature-size bandwidth cost (3309 vs 64 bytes per vote/
-  commit/proposal) has only been exercised at single-validator scale;
-  not evaluated for a real multi-validator set.
 - No independent cryptographic review of this integration (separate
   from ADR-0002's existing ask for a review of the ML-DSA-65 *scheme*
   itself, via `cloudflare/circl`).
