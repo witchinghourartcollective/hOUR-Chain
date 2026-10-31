@@ -14,6 +14,15 @@ The signature layer now rejects keys whose type does not match their declared
 suite, including classical keys mislabeled as ML-DSA. This closes an algorithm
 confusion gap before downstream adoption.
 
+Only genuine Node `KeyObject` instances are accepted; key-option wrappers and
+forged or shadowed metadata cannot override the native key type. Event envelopes
+are validated against `specs/event-envelope.schema.json` (JSON Schema 2020-12,
+including date-time formats) before signing or verification. Evidence-chain
+validation occurs before the application's key resolver is called. This does not
+replace the resolver's authorization, historical revocation or epoch policy.
+Resolvers are synchronous: returned Promises/thenables are rejected and their
+rejections observed so they cannot produce an unhandled-rejection process exit.
+
 ```js
 import { generateTestKeyPair } from '../packages/pqc-profile/src/index.mjs';
 import { sealEvidence, evidenceRecordHash, verifyEvidenceChain }
