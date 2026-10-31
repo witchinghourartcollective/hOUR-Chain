@@ -51,7 +51,7 @@ What exists today:
 
 - `SPEC.md`, `TRUST-MODEL.md`, `THREAT-MODEL.md` — protocol specification and security model.
 - `specs/` — canonical event-envelope schema, signature-suite registry, conformance check, and the first-release fixture template.
-- `packages/pqc-profile/` — reference implementation of the PQC signing profile: canonical signing bytes, ML-DSA-65 and SLH-DSA-SHA2-128s sign/verify, and fail-closed suite/version checks.
+- `packages/pqc-profile/` — reference implementation of the PQC signing profile: canonical signing bytes, ML-DSA-65 and SLH-DSA-SHA2-128s sign/verify, fail-closed suite/version/key-type checks, and signed evidence chains with linked renewals and externally pinned heads. See [PQC evidence rollout](docs/PQC-EVIDENCE-ROLLOUT.md) for APIs, trust boundaries and downstream gates.
 - `chain/` — Cosmos EVM node scaffold (`hourd`) and single-node devnet.
 - `docs/` — architecture decisions, signature canonicalization, first-release pilot, funding, and cloud-cost baseline.
 - `site/` — the mirrorizm.com landing page and its Shopify section.

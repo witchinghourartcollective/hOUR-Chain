@@ -38,6 +38,9 @@ export function importPrivateKey(encoded) {
 export function signEnvelope(envelope, privateKey, { algorithm = "ML-DSA-65", suiteVersion = SUITE_VERSION, signer } = {}) {
   if (!signer) throw new TypeError("Signer identity is required");
   getSuite(algorithm, suiteVersion);
+  if (privateKey?.type !== "private" || privateKey.asymmetricKeyType !== getNodeKeyType(algorithm)) {
+    throw new TypeError("Private key does not match the signature suite");
+  }
   const unsignedEnvelope = { ...envelope };
   delete unsignedEnvelope.signature;
   const candidate = {
@@ -55,6 +58,9 @@ export function verifyEnvelope(envelope, publicKey) {
   }
   try {
     const suite = getSuite(signature.algorithm, signature.suiteVersion);
+    if (publicKey?.type !== "public" || publicKey.asymmetricKeyType !== getNodeKeyType(suite.id)) {
+      return { valid: false, reason: "Public key does not match the signature suite" };
+    }
     const valid = verify(
       null,
       canonicalSigningBytes(envelope),
