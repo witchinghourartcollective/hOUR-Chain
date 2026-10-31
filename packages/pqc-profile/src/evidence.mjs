@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import canonicalize from "canonicalize";
 import { signEnvelope, verifyEnvelope } from "./index.mjs";
+import { assertEnvelopeSchema } from "./schema.mjs";
 
 const DOMAIN = "HBC-EVIDENCE-RECORD-v1";
 
@@ -70,6 +71,7 @@ export function verifyEvidenceChain(records, { resolveKey, expectedHead } = {}) 
     let lastTime = -Infinity;
     for (const record of records) {
       const { payload, envelope } = record;
+      assertEnvelopeSchema(envelope);
       if (payload?.domain !== DOMAIN || payload.previousRecordHash !== previous) {
         throw new Error("Broken evidence chain");
       }
@@ -89,6 +91,13 @@ export function verifyEvidenceChain(records, { resolveKey, expectedHead } = {}) 
         throw new Error("Evidence payload was modified");
       }
       const key = resolveKey(envelope.signature, envelope);
+      if (key !== null && (typeof key === "object" || typeof key === "function") &&
+          typeof key.then === "function") {
+        // The API is synchronous. Observe eventual rejection before refusing
+        // asynchronous resolvers, so a caller error cannot terminate Node.
+        Promise.resolve(key).catch(() => {});
+        throw new TypeError("Async key resolvers are unsupported");
+      }
       if (!verifyEnvelope(envelope, key).valid) throw new Error("Untrusted or invalid signature");
       previous = evidenceRecordHash(record);
     }
