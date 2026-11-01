@@ -8,3 +8,5 @@ Based on the `cosmos/evm` v0.7.0 `evmd` example (SDK v0.54.3, CometBFT v0.39.3, 
 chain-id `hour_9000-1`, EVM chain id 9000, denom `ahbc`; JSON-RPC on :8545.
 
 This script uses known development mnemonics and a test keyring. Do not expose it to the Internet, reuse its keys for value, or overwrite an existing chain home. Build and deployment/IBC gates are tracked in `../docs/LIVE-READINESS.md`.
+
+The inherited CLI currently displays `evmd` and defaults to `~/.evmd`; `devnet.sh` explicitly uses `~/.hourd`. Always pass the intended `--home` when deploying or inspecting a node. Do not move an existing chain home implicitly.

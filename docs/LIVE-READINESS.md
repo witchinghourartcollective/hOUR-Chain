@@ -8,7 +8,7 @@ mainnet launch. Scope estimates below are sequencing aids, not launch promises.
 
 | Component | Found in source | Missing before a live pilot |
 | --- | --- | --- |
-| Cosmos EVM | chain/app.go wires IBC v1/v2 transfer, ERC20 middleware and Tendermint client; chain/go.mod pins cosmos/evm 0.7.0, SDK 0.54.3, ibc-go 11, Go 1.26.0 | Successful Go build/tests; reproducible node image; persistent DO deployment; agreed genesis, validator set and custody; actual RPC/REST endpoints; backups/restore; token/fee policy; deployed rights/consent state |
+| Cosmos EVM | chain/app.go wires IBC v1/v2 transfer, ERC20 middleware and Tendermint client; chain/go.mod pins cosmos/evm 0.7.0, SDK 0.54.3, ibc-go 11, Go 1.26.0 | Go 1.26 build and command tests pass after logging-dependency alignment; still needs a reproducible node image; persistent DO deployment; agreed genesis, validator set and custody; actual RPC/REST endpoints; backups/restore; token/fee policy; deployed rights/consent state |
 | Solana | Rust RecordConsent program, TypeScript SDK, replay/expiry and raw P-256 checks | Real WebAuthn signed-data/challenge/origin/rpId/UP/UV verification; identity enrollment/rotation/revocation; real program ID and funded managed deployment signer; candidate Rust/SBF/LiteSVM CI (latest main run passed); devnet transaction and Cosmos ingestion; upgrade authority and review |
 | Filecoin | Manifest and SHA-512 checkpoint utilities; injected Synapse v2 upload/download adapter with round-trip digest check | SDK version pinned in consuming service; managed signer integration; explicit Calibration/mainnet selection; approved storage budget and funding; payment/deposit/allowance setup; actual upload/replicas/confirmation and retrieval receipt; encryption/key recovery; retention/renewal and canary |
 | Base | witching-hour-token README names Base 8453 token 0xFC1c0FFF99845676A588CE21c28C4859F3035866; app exports same address | Current on-chain state verification; deployed royalty/bridge contract addresses and source verification; signer/owner custody; funded simulation and settled receipt linked to consent. Token presence alone does not complete settlement |
@@ -48,7 +48,7 @@ disabled and liquidity not yet added; re-query the chain before reporting live s
 - Today: establish host access; run whm-infra's read-only collection script; identify
   existing HBC processes and avoid reinitializing any chain. Confirm exact live contract
   and program addresses. Read ADR-0008 and this checklist.
-- Next: compile and test hourd on a Go 1.26 runner; prepare a persistent isolated test
+- Next: keep the now-passing hourd build/command tests green on the Go 1.26 runner; prepare a persistent isolated test
   deployment with new test-only keys. Never expose chain/devnet.sh with known test
   mnemonics or the test keyring to the Internet; never run its overwrite option on an
   existing chain home. Add build/restore checks before enabling Flux workloads.
