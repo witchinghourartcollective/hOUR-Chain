@@ -91,3 +91,5 @@ Clients submit signed events. The protocol validates schema, signature suite and
 - Guaranteed liquidity or token appreciation.
 - Replacement of copyright registration, contracts, PROs, the MLC, or legal advice.
 - Claims that PQC resolves existing wallet discovery, custody, reconciliation, or indexing defects.
+
+ADR-0008 amends the chain-role decision: Solana consent and attestations are an active major workstream alongside the Cosmos EVM L1, Filecoin evidence archive and existing Base integrations. Cross-chain acceptance requires explicit identity, finality, replay and revocation verification. Hosting adapters on DigitalOcean does not establish IBC connectivity; compatible deployed clients and a verified relayer/packet path are required. See docs/LIVE-READINESS.md.

@@ -22,7 +22,7 @@ Pre-alpha protocol definition. Chain direction (see [ADR-0005](docs/ADR-0005-cos
 - **Bitcoin Lightning:** payment adapter. **Planned.**
 - **Open decisions:** token model and validator model (ADR-0005). Chainlink CCIP does not support Cosmos/IBC chains, so the CCIP route (onboard HBC as an EVM chain, or go through Base) is also open.
 
-The Solana consent / Base payments roles from ADR-0004 are superseded.
+[ADR-0008](docs/ADR-0008-solana-filecoin-ibc.md) restores Solana consent/attestations as an active major workstream alongside the Cosmos EVM L1, Filecoin evidence, and existing Base integrations. This lifts the development pause; it does not claim these components are deployed or IBC-connected. See the [live-readiness checklist](docs/LIVE-READINESS.md).
 
 **Security direction:** hOUR Chain is post-quantum-native by design. Disclosure: the current Cosmos/CometBFT validator keys (Ed25519) and EVM account keys (secp256k1) are not post-quantum, so no end-to-end post-quantum claim is made (ADR-0005). Post-quantum authorization, algorithm agility, and protocol-level key rotation are genesis requirements, including for users, validators, governance, treasury, recovery, bridges, proofs, and upgrades. See [ADR-0002](docs/ADR-0002-post-quantum-native-cryptography.md).
 
@@ -56,7 +56,7 @@ What exists today:
 - `docs/` — architecture decisions, signature canonicalization, first-release pilot, funding, and cloud-cost baseline.
 - `site/` — the mirrorizm.com landing page and its Shopify section.
 
-Related repositories: [`hour-chain-solana`](https://github.com/witchinghourartcollective/hour-chain-solana) (paused per ADR-0005); Filecoin evidence in [`hour-chain-filecoin`](https://github.com/witchinghourartcollective/hour-chain-filecoin).
+Related repositories: [`hour-chain-solana`](https://github.com/witchinghourartcollective/hour-chain-solana) (active consent workstream per ADR-0008; pre-alpha); Filecoin evidence in [`hour-chain-filecoin`](https://github.com/witchinghourartcollective/hour-chain-filecoin).
 
 Planned, not yet started: TypeScript SDK and Phigit Python adapter, indexer and verified read model, protocol explorer, and Phigit / Witching Hour App / Live App / agent / Lightning adapters.
 
