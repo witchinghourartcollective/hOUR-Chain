@@ -37,6 +37,10 @@ test('closed IBC channels and expired clients fail before any packet-delivery cl
     portId: 'transfer', channelId: `channel-${i}` }));
   for (const active of [false, true]) {
     const result = await checkRuntime({ cosmos: { chainId: 'hour' }, ibc: { sides } }, { get: async url => {
+      if (url.endsWith('/syncing')) return { syncing: false };
+      if (url.endsWith('/blocks/latest')) return { block: { header: {
+        chain_id: 'hour', height: '10', time: new Date().toISOString(),
+      } } };
       if (url.includes('/channels/')) return { channel: { state: active ? 'STATE_OPEN' : 'STATE_CLOSED',
         counterparty: { channel_id: 'channel-1', port_id: 'transfer' }, connection_hops: ['connection-0'] } };
       if (url.includes('/connections/')) return { connection: { state: 'STATE_OPEN', client_id: '07-tendermint-0' } };
@@ -61,6 +65,10 @@ test('healthy endpoints and matching active IBC sides still do not attest packet
       if (url.endsWith('/status')) return { result: { node_info: { network: 'hour' }, sync_info: {
         catching_up: false, latest_block_height: '10', latest_block_time: '2026-11-01T12:00:00Z',
       } } };
+      if (url.endsWith('/syncing')) return { syncing: false };
+      if (url.endsWith('/blocks/latest')) return { sdk_block: { header: {
+        chain_id: sides[i].chainId, height: '10', time: '2026-11-01T12:00:00Z',
+      } } };
       if (url.includes('/channels/')) return { channel: { state: 'STATE_OPEN',
         counterparty: { channel_id: `channel-${1-i}`, port_id: 'transfer' }, connection_hops: [`connection-${i}`] } };
       if (url.includes('/connections/')) return { connection: { state: 'STATE_OPEN', client_id: `07-tendermint-${i}`,
@@ -77,4 +85,33 @@ test('healthy endpoints and matching active IBC sides still do not attest packet
   assert.equal(result.endpointChecksPassed, true);
   assert.equal(result.creatorWorkflowVerified, false);
   assert.equal(result.checks.find(c => c.name === 'ibc').evidence.packetDeliveryVerified, false);
+});
+
+test('query-routed endpoints preserve query parameters and clear fragments', async () => {
+  let observed;
+  await checkRuntime({ cosmos: { chainId: 'hour', rpc: 'https://node.example/rpc?network=hour#fragment' } }, {
+    get: async url => { observed = new URL(url); throw new Error('fixture'); },
+  });
+  assert.equal(observed.pathname, '/rpc/status');
+  assert.equal(observed.searchParams.get('network'), 'hour');
+  assert.equal(observed.hash, '');
+});
+
+test('fresh Cosmos RPC cannot hide stale IBC REST state', async () => {
+  const sides = ['hour', 'other'].map((chainId, i) => ({ chainId, rest: `http://${chainId}`,
+    portId: 'transfer', channelId: `channel-${i}` }));
+  const result = await checkRuntime({ cosmos: { chainId: 'hour', rpc: 'http://hour' }, ibc: { sides } }, {
+    now: Date.parse('2026-11-01T12:00:00Z'), get: async url => {
+      if (url.endsWith('/status')) return { result: { node_info: { network: 'hour' }, sync_info: {
+        catching_up: false, latest_block_height: '10', latest_block_time: '2026-11-01T12:00:00Z',
+      } } };
+      if (url.endsWith('/syncing')) return { syncing: false };
+      if (url.endsWith('/blocks/latest')) return { block: { header: {
+        chain_id: 'hour', height: '1', time: '2026-10-01T12:00:00Z',
+      } } };
+      throw new Error('must reject stale REST before querying IBC state');
+    },
+  });
+  assert.equal(result.checks.find(c => c.name === 'cosmos').ok, true);
+  assert.match(result.checks.find(c => c.name === 'ibc').error, /stale/);
 });

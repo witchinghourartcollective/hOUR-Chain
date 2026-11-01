@@ -8,7 +8,9 @@ function required(value, label) {
 function endpoint(base, path) {
   const url = new URL(base);
   if (!['http:', 'https:'].includes(url.protocol)) throw new Error('HTTP(S) endpoint required');
-  return `${base.replace(/\/$/, '')}${path}`;
+  url.pathname = url.pathname.replace(/\/$/, '') + path;
+  url.hash = '';
+  return url.href;
 }
 async function request(url, init = {}) {
   const response = await fetch(url, { ...init, signal: AbortSignal.timeout(10000) });
@@ -52,6 +54,15 @@ export async function checkRuntime(config, { get = request, call = rpc, now = Da
       const chain = required(side.chainId, 'IBC chain ID');
       const port = required(side.portId, 'IBC port ID');
       const channel = required(side.channelId, 'IBC channel ID');
+      const syncing = await get(endpoint(rest, '/cosmos/base/tendermint/v1beta1/syncing'));
+      const latest = await get(endpoint(rest, '/cosmos/base/tendermint/v1beta1/blocks/latest'));
+      const header = (latest.sdk_block ?? latest.block)?.header;
+      const age = now - Date.parse(header?.time);
+      if (syncing.syncing !== false || header?.chain_id !== chain ||
+          !/^\d+$/.test(header?.height ?? '') || BigInt(header.height) <= 0n ||
+          !Number.isFinite(age) || age < -30000 || age > 120000) {
+        throw new Error('IBC REST node is unsynchronized, stale or on the wrong chain');
+      }
       const enc = encodeURIComponent;
       const ch = (await get(endpoint(rest, `/ibc/core/channel/v1/channels/${enc(channel)}/ports/${enc(port)}`))).channel;
       if (ch?.state !== 'STATE_OPEN' || ch.counterparty?.channel_id !== other.channelId ||
