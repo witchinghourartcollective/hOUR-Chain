@@ -1,6 +1,6 @@
 # ADR-0005: hOUR Chain as a Cosmos SDK L1 with EVM compatibility
 
-Status: Accepted (2026-10-12)
+Status: Accepted (2026-10-12); amended by [ADR-0008](ADR-0008-solana-filecoin-ibc.md) (2026-11-01)
 Supersedes: [ADR-0004](ADR-0004-solana-consent-base-payments.md)
 Amends: [ADR-0001](ADR-0001-phase-1-settlement.md) (settlement network)
 
@@ -46,6 +46,7 @@ post-quantum signing package), so switching now is cheap.
 
 ## Consequences
 
-- `hour-chain-solana` work is paused; README/SPEC chain-role wording must be
-  updated to point at this ADR.
+- The original Solana pause is lifted for development by ADR-0008. Solana consent
+  and attestations are an active major workstream alongside the Cosmos EVM L1;
+  deployment, browser-passkey and cross-chain verification gates remain.
 - Estimated 3–6 months for one or two Go engineers to reach a testnet.

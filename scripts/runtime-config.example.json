@@ -1,0 +1,9 @@
+{
+  "cosmos": { "chainId": "hour_9000-1", "rpc": "http://127.0.0.1:26657" },
+  "ibc": { "sides": [
+    { "chainId": "hour_9000-1", "rest": "http://127.0.0.1:1317", "portId": "transfer", "channelId": "REPLACE" },
+    { "chainId": "REPLACE", "rest": "https://REPLACE", "portId": "transfer", "channelId": "REPLACE" }
+  ] },
+  "solana": { "rpc": "https://api.devnet.solana.com", "programId": "REPLACE", "genesisHash": "REPLACE" },
+  "base": { "rpc": "https://mainnet.base.org", "tokenAddress": "0xFC1c0FFF99845676A588CE21c28C4859F3035866" }
+}

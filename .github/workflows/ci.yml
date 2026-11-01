@@ -23,3 +23,17 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run check:conformance
+
+  chain:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chain
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: chain/go.mod
+          cache-dependency-path: chain/go.sum
+      - run: go build -o build/hourd ./cmd/evmd
+      - run: go test ./cmd/evmd/...
