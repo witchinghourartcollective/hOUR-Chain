@@ -27,7 +27,9 @@ disabled and liquidity not yet added; re-query the chain before reporting live s
    and permission to the target droplets. Keep keys in the environment secret manager;
    never paste wallet seeds, SSH private keys or SOPS private keys into chat. This
    session has GitHub connector access, but no DO connector, kubectl, SSH identity,
-   Go compiler, Rust compiler or Docker runtime.
+   Go compiler, Rust compiler or Docker runtime. An existing whm-ops GitOps route
+   exists, but its report endpoint returned HTTP 403 / Cloudflare code 1010 to this
+   session. Restore authorized cloud access to that route or attach a cloud executor.
 2. Connect the intended hOUR blockchain GitHub organization, or provide its exact
    URL if it differs from the accessible owners. The connected repository search
    currently exposes witchinghourartcollective and Witching-Hour-Music repositories.
