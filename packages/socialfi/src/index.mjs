@@ -18,7 +18,12 @@ export function canonicalSocialFiJSON(value) {
   if (Number.isSafeInteger(value)) return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalSocialFiJSON).join(',')}]`;
   if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
-    return `{${Object.keys(value).sort().map(k => `${JSON.stringify(k)}:${canonicalSocialFiJSON(value[k])}`).join(',')}}`;
+    const fields = Object.getOwnPropertyDescriptors(value);
+    const keys = Reflect.ownKeys(value);
+    if (keys.some(k => typeof k !== 'string' || !fields[k].enumerable || !('value' in fields[k]))) {
+      throw new TypeError('SocialFi objects require own enumerable data properties');
+    }
+    return `{${keys.sort().map(k => `${JSON.stringify(k)}:${canonicalSocialFiJSON(fields[k].value)}`).join(',')}}`;
   }
   throw new TypeError('SocialFi payloads require plain JSON with safe integer numbers');
 }
@@ -33,7 +38,7 @@ function validate(type, payload) {
   const fields = FIELDS[key];
   if (!SOCIALFI_EVENT_TYPES.includes(type) || !payload || Array.isArray(payload) ||
       Object.getPrototypeOf(payload) !== Object.prototype ||
-      Object.keys(payload).length !== fields.length || fields.some(f => !(f in payload))) {
+      Object.keys(payload).length !== fields.length || fields.some(f => !Object.prototype.propertyIsEnumerable.call(payload, f))) {
     throw new TypeError('Unknown SocialFi event or payload fields');
   }
   for (const [key, value] of Object.entries(payload)) {
@@ -56,7 +61,14 @@ function validate(type, payload) {
 export function createSocialFiDraft(eventType, actor, subject, payload, {
   eventId = randomUUID(), issuedAt = new Date().toISOString(),
 } = {}) {
+  payload = JSON.parse(canonicalSocialFiJSON(payload));
   validate(eventType, payload); text(actor); text(subject); text(eventId);
+  if (typeof payload.workId === 'string' && (payload.workId !== subject || !/^hour:work:.+/.test(payload.workId))) {
+    throw new TypeError('SocialFi work reference must match the envelope subject');
+  }
+  if (eventType === 'socialfi.work.created.v1' && !/^hour:work:.+/.test(subject)) {
+    throw new TypeError('A registered hOUR work identifier is required');
+  }
   if (eventId.length < 16 || typeof issuedAt !== 'string' || !Number.isFinite(Date.parse(issuedAt)) ||
       new Date(issuedAt).toISOString() !== issuedAt) throw new TypeError('Invalid event identity or UTC timestamp');
   return {
@@ -67,6 +79,7 @@ export function createSocialFiDraft(eventType, actor, subject, payload, {
 }
 
 export function assertSocialFiDraft(draft) {
+  draft = JSON.parse(canonicalSocialFiJSON(draft));
   if (draft?.domain !== SOCIALFI_DOMAIN || draft.status !== 'draft' ||
       Object.keys(draft).sort().join() !== ['domain', 'envelope', 'payload', 'status'].sort().join()) {
     throw new TypeError('Expected an unsigned SocialFi draft');
