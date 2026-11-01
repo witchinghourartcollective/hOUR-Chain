@@ -18,6 +18,8 @@ hOUR Chain records who created a work, what evidence supports that claim, how ri
 - Indexer
 - Dispute reviewer
 
+See [TRUST-MODEL.md](TRUST-MODEL.md) for actor responsibilities, trust boundaries, custody, signer roles, and administrative assumptions, and [THREAT-MODEL.md](THREAT-MODEL.md) for protected assets, threats, and controls.
+
 ## Core records
 
 ### Identity
