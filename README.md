@@ -118,3 +118,7 @@ PATH=$PWD/build:$PATH ./devnet.sh --no-install -y
 ```
 
 Chain-id `hour_9000-1`, EVM chain id 9000, denom `ahbc`; EVM JSON-RPC on `localhost:8545`, CometBFT RPC on `localhost:26657`.
+
+## SocialFi creator community
+
+SocialFi is a first-class product surface for profiles, public updates, collaboration, real creative hours and support intents. See [SocialFi contract and integration boundaries](docs/SOCIALFI.md) and `packages/socialfi/src/index.mjs`. Social activity is distinct from signed rights consent, token rewards and settlement.
