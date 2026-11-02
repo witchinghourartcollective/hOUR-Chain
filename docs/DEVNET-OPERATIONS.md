@@ -1,5 +1,38 @@
 # hOUR Chain devnet operations
 
+## Current verification snapshot (2026-11-02)
+
+The live `hour_9000-1` node was checked read-only over the existing SSH path.
+At 2026-11-02 01:40 UTC, `/status` reported height 147129,
+`catching_up=false`, and validator key type `tendermint/PubKeyMlDsa65`;
+`/net_info` reported zero peers and EVM JSON-RPC returned chain ID `0x2328`.
+The latest soak sample (01:37 UTC) reported active, three lifetime restarts,
+a 604,471,296-byte service memory peak, height 147092, zero peers, and chain
+ID `0x2328`. A checkpoint signature was recorded for height 146327. These are
+point-in-time observations, not the 24-hour soak or multi-operator proof.
+
+The prior process was killed by the `hourd.service` memory cgroup at 2026-11-02
+00:25 UTC. The unit restarted at 00:26 UTC and the next samples successfully
+reported advancing heights (146262 at 00:27, 146322 at 00:32, 146382 at 00:37,
+and 146441 at 00:42 UTC), zero peers, EVM chain ID `0x2328`, and a service
+memory peak of about 604 MiB. The unit is capped at 768 MiB with a 640 MiB
+high-water mark; the host has 3.6 GiB RAM and was using 1.4 GiB swap at the
+check. Keep this as an active risk; do not raise the cap without accounting
+for LND, Bitcoin Core, and k3s on the same host.
+
+The new soak window starts with the 00:26:15 UTC restart. It is not complete until
+at least 24 continuous hours of valid samples show an active service, advancing
+height, expected chain ID, stable memory, and an understood restart count.
+Review samples with:
+
+```sh
+journalctl -u hourd-soak-sample.service --since '2026-11-02 00:26:15 UTC' --no-pager
+```
+
+At the 01:37 UTC sample, about 72 minutes of the restarted window had elapsed.
+Continue the timer through at least 2026-11-03 00:26:15 UTC and inspect the
+complete journal for gaps, restarts, height progress, and memory trend.
+
 ## Current node and access boundary
 
 The DigitalOcean node is a one-validator development network, not a public
@@ -40,12 +73,24 @@ completed 24-hour soak; the first full window ends no earlier than 2026-10-20
 `go test ./... -run TestICS20TransferAndTimeoutRefund` exercises the hOUR app
 against IBC-Go's Cosmos test app. It proves outbound voucher minting and
 success acknowledgement, timeout with source refund, and a return transfer
-that releases hOUR escrow. This is local module-level IBC proof, not yet a
-two-hOUR-node test. The current EVM module initializes process-global chain
+that releases hOUR escrow. A separate-process two-hOUR-node test was also run
+on 2026-11-02: Hermes opened an unordered `transfer/channel-0` channel, relayed
+1,000,000 `atest` from chain A to B, and relayed the 1,000,000-unit voucher
+back to A. The destination showed the voucher after the first leg, the source
+showed the original denom after the return leg, and Hermes reported no pending
+packets or acknowledgements. The temporary chains used isolated `/tmp` homes;
+no live-devnet state was changed. This is a successful local interoperability
+smoke test, not a public-network or timeout/refund proof on two hOUR nodes.
+
+Hermes 1.13.2 warned that this chain reports Cosmos SDK 0.54.3, outside its
+documented supported range (0.46 through 0.53.x), and its misbehaviour workers
+could not extract headers from the emitted `UpdateClient` events. Treat this
+run as a positive ICS-20 transfer result with a relayer compatibility caveat;
+select a relayer that supports this fork and test misbehaviour handling before
+public use. The current EVM module initializes process-global chain
 configuration per app, so two hOUR EVM apps in one test process panic on
-duplicate activation. A separate-process/two-node transfer remains necessary
-to verify hOUR-to-hOUR interoperability before connecting a relayer to a
-multi-node hOUR network. For a public testnet, also add independent
+duplicate activation; the separate-process path remains required. For a
+public testnet, also add independent
 validators, genesis distribution, peer discovery, upgrade coordination,
 snapshots, metrics, alerts, and recovery instructions. Do not promote the
 current one-validator node by simply opening its RPC port to the internet.

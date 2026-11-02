@@ -43,16 +43,27 @@ rotation, and incident-recovery rules.
 ## 3. Post-quantum requirement
 
 The accepted protocol requirement says post-quantum authorization is required
-from genesis, but the selected Cosmos/CometBFT stack currently uses Ed25519
-validator keys and secp256k1 EVM accounts. The ML-DSA event-signature profile
-does not replace either consensus or EVM transaction authorization.
+from genesis. The implementation status has changed since this gate was first
+written. On 2026-11-02, the live devnet's CometBFT status reported a
+`tendermint/PubKeyMlDsa65` validator key; the isolated four-validator run
+recorded on 2026-10-28 confirmed three ML-DSA-65 signatures in a commit at
+height 8. A real ML-DSA-65 `PqcAccount` UserOperation was also broadcast on the
+devnet on 2026-10-21.
+
+These results establish working PQ-capable paths, not end-to-end PQ security.
+Ordinary EVM EOAs still use secp256k1, the deployed `PqcAccount` is an
+experimental demonstration rather than a broadly integrated account path, and
+external settlement rails such as Base retain their own cryptographic
+assumptions. The ML-DSA verifier's authors label it experimental and
+unaudited. The live-node snapshot is operational evidence, not an independent
+review.
 
 **Recommendation:** keep the disclosure strict and do not claim end-to-end
-post-quantum security. Treat the current stack as an experimental devnet. A
-public testnet may proceed only if its scope explicitly permits conventional
-consensus/account keys and ADR-0002 is revised to make that a staged,
-non-production exception. Otherwise, PQ consensus/account authorization is a
-hard blocker, not a documentation checkbox.
+post-quantum security. Treat the current stack as an experimental devnet. Keep
+the public-testnet gate closed until the intended user, validator, bridge, and
+administrative authorization paths are demonstrated and independently
+reviewed, or the owner formally changes ADR-0002. The live validator and one
+PQC smart-account demonstration do not by themselves close that gate.
 
 ## 4. Testnet gate
 
@@ -60,8 +71,9 @@ Before calling a network a public testnet, require:
 
 - A multi-operator validator set with documented key custody and recovery.
 - Reproducible genesis, binaries, upgrades, snapshots, and restart procedures.
-- A successful two-chain ICS-20 transfer, including acknowledgement,
-  timeout, and refund tests.
+- A successful two-hOUR-chain ICS-20 transfer and acknowledgement, plus
+  timeout/refund coverage; the current timeout/refund proof uses an upstream
+  IBC test app rather than a second hOUR node.
 - Public RPC behind rate limits and abuse controls; validator P2P separated
   from administrative and signing interfaces.
 - Resource and recovery evidence over a sustained run, not a single healthy
@@ -89,6 +101,10 @@ Before calling a network a public testnet, require:
    and EVM account keys, not just the existing ML-DSA event-signature
    layer. ADR-0002 is not revised. See
    [PQ unblock plan](#pq-unblock-plan) below for what closes this gate.
+
+   This owner decision was recorded on 2026-10-20, before the later consensus
+   and smart-account demonstrations. Those demonstrations update the evidence
+   below; they do not waive the requirement or complete independent review.
 
 ## Target token relationship (HOUR as the single asset)
 
@@ -170,17 +186,18 @@ access — a written operating procedure, not a fork or an upgrade.
 ## PQ unblock plan
 
 What currently exists: an ML-DSA event-signature profile for protocol
-events (ADR-0002 follow-up item, prototyped), and, as of 2026-10-20, an
-additive ML-DSA consensus-checkpoint co-signing layer (see below). What's
-still missing and gates any public testnet:
+events, ML-DSA-65 validator consensus on the live devnet (verified by the
+2026-11-02 status response), an isolated four-validator consensus proof, an
+additive consensus-checkpoint signer, and one deployed PQC smart-account
+demonstration. These are experimental and are not an independent security
+review. The remaining gates are:
 
-1. Validator consensus authorization still signs blocks with Ed25519
-   (CometBFT default) — the checkpoint layer below attests blocks
-   independently, but does not replace Ed25519 as the actual consensus
-   signature.
-2. EVM accounts (bridge signers, user transactions) still authorize with
-   secp256k1 — no PQ or composite conventional+PQC EVM account scheme
-   is live yet, but the account-side extension point is built: see
+1. The live validator path needs a sustained operational soak and independent
+   review. The 2026-11-02 check found the service had just restarted after a
+   cgroup OOM kill; do not treat the current snapshot as a completed soak.
+2. EVM authorization is mixed. Ordinary EOAs (including any flow that uses
+   them for bridge administration or user transactions) still use secp256k1.
+   A PQ smart-account path exists: see
    `account-abstraction/contracts/pqc/PqcAccount.sol` (branch
    `pqc-account`, pushed to the project's own fork, not upstream
    eth-infinitism) — overrides `BaseAccount._validateSignature` to
@@ -229,7 +246,7 @@ still missing and gates any public testnet:
      `account-abstraction` fork's `pqc-account` branch now documents
      this correctly (fixed 2026-10-20).
 
-   **Real account created and validated end-to-end, 2026-10-21.**
+   **One real account created and validated end-to-end, 2026-10-21.**
    `EntryPoint` and `PqcAccountFactory` deployed (plain `CREATE`, same
    no-deterministic-deployer-proxy reason as above):
    `EntryPoint` `0x20c3620358921b0631B2c3e2F72A905A6246cF91`,
@@ -252,13 +269,34 @@ still missing and gates any public testnet:
    precompile on hOUR Chain's own `cosmos/evm` backport remains the
    better long-term answer regardless (cheaper gas, ours to
    write/review) — still not built.
-3. ADR-0002's own follow-up list (benchmark PQC costs, independent
-   cryptographic review) is still open.
+3. A disposable two-node hOUR-to-hOUR run on 2026-11-02 opened an unordered
+   `transfer/channel-0` channel, transferred 1,000,000 `atest` A-to-B, then
+   returned the 1,000,000-unit voucher B-to-A. The destination voucher was
+   present after the first leg, the voucher was burned on return, and Hermes
+   reported no pending packets or acknowledgements. This closes the basic
+   two-node success/acknowledgement smoke-test item. The separate
+   `TestICS20TransferAndTimeoutRefund` still supplies timeout/refund coverage
+   only against an upstream IBC test app. Hermes 1.13.2 warned that SDK 0.54.3
+   is outside its supported range and could not extract headers from
+   `UpdateClient` events for misbehaviour checks; do not treat this run as
+   relayer compatibility or misbehaviour validation. See
+   `docs/DEVNET-OPERATIONS.md` for details.
+4. ADR-0002's independent cryptographic review and the review of the account
+   verifier remain open. See `docs/CRYPTO-REVIEW-PACKET.md` for the review
+   scope and reproducible evidence.
 
-Decision recorded 2026-10-20: validator-consensus PQ is staged — start
-with (1a) below now, (1b) is the end target.
+Historical decision recorded 2026-10-20: begin with additive checkpoint
+signatures, with PQ validator consensus as the end target. The technical
+consensus integration described below has since been implemented; the open
+gates are operational soak, independent review, and end-to-end authorization
+coverage rather than the fork implementation itself.
 
-### 1a. Built now: additive ML-DSA checkpoint co-signing
+The detailed implementation notes below preserve the state and wording from
+their dated work logs. The 2026-11-02 status at the top of this section is the
+current summary; older phrases such as “not yet opened” describe the cited
+date, not the present repository state.
+
+### 1a. Historical first step: additive ML-DSA checkpoint co-signing
 
 `packages/pqc-checkpoint/` (new): each validator operator independently
 ML-DSA-65-signs a canonical `{chainId, height, blockHash, appHash, time}`
@@ -266,20 +304,16 @@ envelope for a given block (reusing `packages/pqc-profile`'s existing
 sign/verify primitives and domain-separated canonicalization). A
 separate verifier checks a quorum of these signatures against the live
 CometBFT validator set's voting power, using the standard BFT `>2/3`
-threshold. This does **not** touch consensus signing — Ed25519 still
-produces the actual block signatures — it adds an independently
-PQ-verifiable attestation on top. Proven end-to-end against the live
-devnet node (`whm-lnd-cloud`, height 83317, chain `hour_9000-1`,
-single-validator quorum of 1): see `packages/pqc-checkpoint/test/` for
-the unit-tested quorum math (including the exactly-2/3-is-not-quorum
-edge case) and `bin/sign-checkpoint.mjs` / `bin/verify-checkpoint.mjs`
-for the live CLI path. Not yet deployed as a running service — the
-signer's ML-DSA private key is a new validator-operator credential and
-should get the same custody/rotation treatment as the existing
-`priv_validator_key.json` (ties into HBC-010) before it runs
-unattended on shared infra.
+threshold. At the time this checkpoint layer was first implemented, Ed25519
+still produced the actual block signatures; the checkpoint added an
+independently PQ-verifiable attestation. It was proven against the live devnet
+at the height recorded below. This was the first step, superseded for
+consensus authorization by the ML-DSA integration described next. The
+checkpoint signer's ML-DSA private key remains a separate operator credential
+and needs the same custody/rotation treatment as `priv_validator_key.json`
+before it runs unattended on shared infrastructure.
 
-### 1b. End target: fork cometbft + cosmos-sdk crypto codecs
+### 1b. ML-DSA consensus integration: implemented; verify current deployment
 
 `cometbft@v0.39.3`'s `crypto/encoding/codec.go` (`PubKeyToProto` /
 `PubKeyFromProto` / `PubKeyFromTypeAndBytes`) and cosmos-sdk's parallel
