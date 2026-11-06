@@ -193,8 +193,20 @@ demonstration. These are experimental and are not an independent security
 review. The remaining gates are:
 
 1. The live validator path needs a sustained operational soak and independent
-   review. The 2026-11-02 check found the service had just restarted after a
-   cgroup OOM kill; do not treat the current snapshot as a completed soak.
+   review. **Update, 2026-11-06:** the window that began at the 2026-11-04
+   21:23:59 UTC restart has now run 24+ continuous hours (49.3 hours and
+   counting as of the last sample) with zero further restarts, monotonic
+   height progress, and a stable chain ID — the first window to clear the
+   literal 24-continuous-hour bar without interruption. See
+   `docs/DEVNET-OPERATIONS.md`'s "Current verification snapshot" for the full
+   journal evidence. This closes the narrow "24 continuous hours, no
+   restart" reading of the soak requirement, but not the broader one: the
+   immediately prior window ran ~69 hours before an OOM kill, and the current
+   window's own memory peak is climbing at roughly the same rate it did
+   before that kill (+288 MiB over 49.3 hours). Treat the underlying memory
+   growth as unresolved and expect another OOM on this unit; do not cite this
+   as a completed long-term-stability result, and it is independent review
+   that remains fully open regardless.
 2. EVM authorization is mixed. Ordinary EOAs (including any flow that uses
    them for bridge administration or user transactions) still use secp256k1.
    A PQ smart-account path exists: see

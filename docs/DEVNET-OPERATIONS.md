@@ -1,37 +1,40 @@
 # hOUR Chain devnet operations
 
-## Current verification snapshot (2026-11-02)
+## Current verification snapshot (2026-11-06)
 
-The live `hour_9000-1` node was checked read-only over the existing SSH path.
-At 2026-11-02 01:40 UTC, `/status` reported height 147129,
-`catching_up=false`, and validator key type `tendermint/PubKeyMlDsa65`;
-`/net_info` reported zero peers and EVM JSON-RPC returned chain ID `0x2328`.
-The latest soak sample (01:37 UTC) reported active, three lifetime restarts,
-a 604,471,296-byte service memory peak, height 147092, zero peers, and chain
-ID `0x2328`. A checkpoint signature was recorded for height 146327. These are
-point-in-time observations, not the 24-hour soak or multi-operator proof.
-
-The prior process was killed by the `hourd.service` memory cgroup at 2026-11-02
-00:25 UTC. The unit restarted at 00:26 UTC and the next samples successfully
-reported advancing heights (146262 at 00:27, 146322 at 00:32, 146382 at 00:37,
-and 146441 at 00:42 UTC), zero peers, EVM chain ID `0x2328`, and a service
-memory peak of about 604 MiB. The unit is capped at 768 MiB with a 640 MiB
-high-water mark; the host has 3.6 GiB RAM and was using 1.4 GiB swap at the
-check. Keep this as an active risk; do not raise the cap without accounting
-for LND, Bitcoin Core, and k3s on the same host.
-
-The new soak window starts with the 00:26:15 UTC restart. It is not complete until
-at least 24 continuous hours of valid samples show an active service, advancing
-height, expected chain ID, stable memory, and an understood restart count.
-Review samples with:
+The 2026-11-02 00:26:15 UTC window (restart counter 3) did not survive to a
+clean close: it ran 68h56m before the `hourd.service` memory cgroup killed the
+process again, at 2026-11-04 21:22:58 UTC (`Failed with result 'oom-kill'`).
+The unit restarted at 21:23:59 UTC (restart counter 4) and has been
+continuously `active` since, with **zero further restarts** through the
+2026-11-06 22:48:11 UTC sample — the first window to clear the 24-continuous-
+hour bar from `GENESIS-DECISION-GATE.md` without an interruption inside the
+window itself:
 
 ```sh
-journalctl -u hourd-soak-sample.service --since '2026-11-02 00:26:15 UTC' --no-pager
+journalctl -u hourd-soak-sample.service --since '2026-11-04 21:23:59 UTC' --no-pager
 ```
 
-At the 01:37 UTC sample, about 72 minutes of the restarted window had elapsed.
-Continue the timer through at least 2026-11-03 00:26:15 UTC and inspect the
-complete journal for gaps, restarts, height progress, and memory trend.
+590 five-minute samples were recorded over that span (2026-11-04T21:27:43Z
+through 2026-11-06T22:48:11Z, ~49.3 hours and counting). Across them: service
+state stayed `active`, restart count held at 4 (no new restarts), CometBFT
+height advanced monotonically (177722 → 206081, no stalls or gaps), `/net_info`
+peers stayed at 0, and EVM JSON-RPC chain ID stayed `0x2328`.
+
+**Memory is still the open risk, not a resolved one.** Service memory peak
+grew from 383,729,664 bytes (first sample, 21:27:43 UTC) to 671,657,984 bytes
+(latest sample, 22:48:11 UTC) — roughly +288 MiB over 49.3 hours, ~5.8 MiB/hour.
+That is already above the 640 MiB high-water mark this doc previously used as
+a caution line, and under 768 MiB cap only by about 96 MiB. At the observed
+growth rate, continuing on the current trajectory would reach the cap in
+roughly 17 more hours. The prior (restart-3) window started cooler and still
+took ~69 hours to OOM, consistent with a slow in-process leak rather than a
+one-time startup cost. **Conclusion: the literal "24 continuous hours, no
+restart" bar is now met for the first time. The underlying memory-growth cause
+is not fixed, and a future OOM kill on this same unit should be expected,
+not treated as a surprise regression.** Re-run this query periodically and
+watch the memory-peak column specifically; do not read "still active" alone
+as a passing soak.
 
 ## Current node and access boundary
 
