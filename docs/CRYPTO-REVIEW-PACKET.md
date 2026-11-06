@@ -72,3 +72,36 @@ the hOUR Chain integration, the two Cosmos forks, and the deployed verifier.
   Base/Solana/Lightning security and bridge trust assumptions.
 - A retest recommendation after fixes; commissioning a review or receiving a
   report does not by itself close the public-testnet gate.
+
+## Reviewer terms
+
+This is currently an unpaid, best-effort engagement, not a billable audit. The
+terms below exist so a prospective reviewer knows exactly what they're
+agreeing to before they start, and so there's no ambiguity about disclosure
+once they find something.
+
+**Disclosure.** `hOUR-Chain` and its `cometbft`/`cosmos-sdk` forks are already
+public on GitHub, so this is not a confidentiality NDA over secret code —
+there's nothing to keep secret. What it governs is *timing*: findings go to
+the hOUR Chain team privately first. We commit to acknowledging receipt
+within 5 business days and to a good-faith fix-or-respond on Critical/High
+findings within 30 days of acknowledgement. The reviewer may publish their
+own report publicly 30 days after we acknowledge receipt, or immediately once
+we've shipped a fix/response to the specific finding — whichever comes
+first. This protects users from an unpatched public writeup while still
+giving the reviewer a guaranteed, bounded path to publish under their own
+name.
+
+**Timeline.** Best-effort, not a contractual SLA: propose a 4–6 week review
+window from acceptance, with one informal check-in near the 2-week mark. No
+deadline is enforced against the reviewer — this is explicitly unpaid, so
+we're asking for their time, not buying it on a schedule.
+
+**Compensation.** There is no audit budget right now. What's offered instead:
+full public credit as the project's first independent reviewer, in this
+document and in any published writeups; the unrestricted right to publish
+their own findings/writeup under their own name once the disclosure window
+above closes; and first right of refusal on a paid follow-up review if/when
+the project secures funding (token allocation or USDC — intent stated, not
+promised). A reviewer who needs paid work should expect this to be a pass,
+and that's a reasonable call on their part.
