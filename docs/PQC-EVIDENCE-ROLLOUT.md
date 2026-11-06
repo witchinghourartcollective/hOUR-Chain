@@ -54,15 +54,21 @@ public evidence.
 
 ## Repository boundaries and release gates
 
+[ADR-0008](ADR-0008-solana-filecoin-ibc.md) amends ADR-0005 and lifts the Solana
+development pause. Cosmos EVM remains the sovereign L1; Filecoin preserves evidence
+and Base remains a separate settlement integration. This change in development
+status does not activate any network deployment. See [live readiness](LIVE-READINESS.md)
+and the [cloud test handoff](CLOUD-E2E-HANDOFF.md) for the ordered runtime gates.
+
 | Repository/component | Integration | Release gate |
 | --- | --- | --- |
 | hOUR-Chain | Versioned signed evidence and trusted-key verification | `npm run check`; independent review before security-critical use |
-| hour-chain-filecoin | Preserve exact signed bytes and renewal receipts; linked archive checkpoints | Archive tests; trusted signature/time verification; actual storage/retrieval adapter |
+| hour-chain-filecoin | Preserve exact signed bytes and renewal receipts; linked archive checkpoints; injected Synapse upload/download adapter | Archive/storage tests; pinned SDK and managed transaction signer; live Calibration upload, provider confirmation and retrieval after restart; trusted signature/time verification |
 | whm-flywheel | Produce evidence after confirmed execution, referencing policy and delegation | Existing `scripts/verify.sh`, PR/CI and `scripts/deploy.sh` gates; no key export |
 | whm-infra / Phigit sync | Preserve original raw observations as UNKNOWN; archive signed promoted records separately | Sync tests, server dry-run/canary, persisted checkpoint and deployed image verification |
 | Phigit OS | Resolve historical authorized signer keys and epochs; reject missing pinned heads | Verified identity/revocation policy and integration tests |
 | Witching Hour App / Live App | Link performance/time records to approved rights evidence | Creator approval and exact canonical-event integration tests |
-| hour-chain-solana | Paused by ADR-0005; no new PQ production deployment | Reconsider only if an explicit architecture decision resumes this adapter |
+| hour-chain-solana | Active consent/attestation workstream restored by [ADR-0008](ADR-0008-solana-filecoin-ibc.md); raw-digest P-256 prototype | Real WebAuthn and contributor lifecycle; actual devnet deployment; finalized consent verification and Cosmos ingestion; no PQ-safe Solana claim |
 | Cosmos EVM / CometBFT | Consensus, governance, admin and account migration remain separate | Reviewed chain upgrade, validator coordination, recovery rehearsal, load/DoS tests |
 
 No running service consumes these new reference APIs automatically. A repository
