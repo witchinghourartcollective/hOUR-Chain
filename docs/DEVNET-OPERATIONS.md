@@ -1,5 +1,48 @@
 # hOUR Chain devnet operations
 
+## Memory-growth root cause and mitigation (2026-11-07)
+
+The memory growth flagged below (restart-4 window, ~5.8 MiB/hour) was
+diagnosed, not just observed. `systemctl show hourd.service` plus
+`memory.stat` on the restart-4 process showed `anon=661MB, file=0,
+swap=256MB (maxed)` just before this fix — genuine anonymous memory
+growth, not reclaimable page cache. Disk at the same point:
+`blockstore.db` 2.2GB, `application.db` 1.3GB, `cs.wal` 1021MB, host disk
+86% full (17GB free of 119GB).
+
+**Root cause: this is a zero-peer, zero-transaction devnet that was still
+committing a new block roughly every 5 seconds, forever**, because
+`create_empty_blocks = true` in `config.toml`. Setting it to `false` did
+**not** fix this — checked against the fork's own
+`forks/cometbft/consensus/state.go`: `create_empty_blocks` is bypassed
+whenever `needProofBlock()` returns true, which it does any time the
+previous block changed the app hash. On this chain the app hash changes
+every block regardless of transactions, because `cosmos/evm`'s fee-market
+module recalculates `base_fee` in every block's begin/end-block — normal
+EVM-chain behavior (mainnet produces a block every slot too), not a bug
+to eliminate. Confirmed live: after setting `create_empty_blocks = false`
+and restarting (2026-11-07 18:57:37 UTC), block cadence stayed at ~5-10s,
+unchanged.
+
+**The lever that does work: `timeout_commit`**, which gates the minimum
+time between any two blocks regardless of the empty-block/proof-block
+logic above. Raised from `5s` to `60s` and restarted again (2026-11-07
+19:00:36 UTC); confirmed block cadence moved to ~60-70s per block (height
+208994 at 19:01:42 → 208995 at 19:02:45, a 63s gap, vs. the prior ~5s).
+This cuts the block-commit rate roughly 12x, which should cut the
+anon-memory growth rate by a similar factor since it scales with
+LevelDB/IAVL write-and-compaction volume, not wall-clock time directly.
+This has not yet been confirmed over a multi-hour window — treat it as
+the applied mitigation, not a proven fix, until a new soak sample shows
+the growth-rate improvement. `create_empty_blocks = false` was left in
+place (harmless, just ineffective here) rather than reverted.
+
+Both config edits are backed up as
+`config.toml.bak-<timestamp>` in `/var/lib/hourd-data/config/` on
+`whm-lnd-cloud`. Disk usage (86% full) and the existing 1GB `cs.wal` are
+not addressed by this change and remain open follow-ups if the slower
+cadence isn't enough on its own.
+
 ## Current verification snapshot (2026-11-06)
 
 The 2026-11-02 00:26:15 UTC window (restart counter 3) did not survive to a
