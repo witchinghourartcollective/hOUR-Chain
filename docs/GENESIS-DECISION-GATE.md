@@ -281,6 +281,45 @@ review. The remaining gates are:
    precompile on hOUR Chain's own `cosmos/evm` backport remains the
    better long-term answer regardless (cheaper gas, ours to
    write/review) — still not built.
+
+   **Finding, 2026-11-07: the deployed bridge contracts don't need to
+   change for this.** `WrappedHour.sol`'s `confirmMint`/`setSigner` and
+   `HourBridgeVault.sol`'s `confirmRelease`/`setSigner` all gate signer
+   identity by `isSigner[msg.sender]` — there is no `ecrecover` anywhere
+   in either contract, so a bridge signer (or the `Ownable` owner, the
+   single highest-value key in the bridge since it can rotate the whole
+   signer set) can be any contract address, including a `PqcAccount`.
+   Proven against live Base Sepolia (not a local fork or simulation) in
+   `account-abstraction`'s `pqc-account` branch,
+   `scripts/base-sepolia-bridge-signer-prototype.js`: a `PqcAccount`
+   supplied the 2nd of 2 required confirmations on a fresh **test**
+   `WrappedHour` deployment (3 signers: the PqcAccount, one EOA, one
+   never-confirming placeholder to satisfy `MIN_SIGNERS`; threshold 2),
+   alongside the existing EOA signer, and the mint processed — all
+   through `WrappedHour.sol` exactly as deployed, no contract changes.
+   Addresses: verifier `0xcdb4Ba1d560d9Ed8FEf856fa279d51564C1F11C9`,
+   EntryPoint `0x30B99B1d4173Ae5ADBD1b70cD737D37Ce3498F13`,
+   PqcAccountFactory `0xC73412A234D3e853be2539b79F867E5d874603da`,
+   PqcAccount `0x1060e371EDfc758b9dd99AC4466d0210a430d9c3`, test
+   WrappedHour `0x0c37Dcd054c268Dc0dDF2AeAc9c3cFD1870Fe966`.
+
+   This prototype uses the repo's existing `TestMlDsaVerifier` mock, not
+   the real ZKNoxHQ verifier — it proves the **bridge integration
+   pattern**, not ML-DSA-65 cryptographic correctness (that remains
+   whatever the devnet evidence above and the pending independent review
+   establish). Do not cite this as evidence the real verifier is sound.
+
+   What this does and doesn't unblock: it means PQ-protecting the real
+   Base-mainnet bridge owner and signers is a key-management and
+   deployment exercise, not a Solidity rewrite — deploy `PqcAccount`s
+   with the real verifier, fund them, then call the existing
+   `setSigner`/`transferOwnership` the same way any new signer is added
+   today. It does **not** mean this is ready for the real bridge: the
+   real verifier is still unaudited, nothing here has independent
+   review, and ERC-4337 UserOp submission needs either a bundler or a
+   self-relaying script calling `EntryPoint.handleOps` directly — new
+   operational surface that isn't live anywhere yet. Treat this as the
+   concrete migration path for gate 2, not as gate 2 closed.
 3. A disposable two-node hOUR-to-hOUR run on 2026-11-02 opened an unordered
    `transfer/channel-0` channel, transferred 1,000,000 `atest` A-to-B, then
    returned the 1,000,000-unit voucher B-to-A. The destination voucher was
