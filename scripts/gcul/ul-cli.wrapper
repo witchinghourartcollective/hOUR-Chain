@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Wrapper for the Universal Ledger CLI container. Persists across Cloud Shell sessions (unlike an alias).
+# Retries only when the pre-flight endpoint check fails with "Unavailable" (nothing has been submitted yet).
+IMG=us-central1-docker.pkg.dev/universal-ledger-artifacts/release/ul-cli:stable
+TRIES=${UL_CLI_TRIES:-8}
+run() {
+  docker run --rm -i --user "$(id -u):$(id -g)" \
+    -v /etc/ssl/certs:/etc/ssl/certs:ro \
+    -v /tmp:/tmp \
+    -v "$HOME/.config/ul-cli:/home/.config/ul-cli" \
+    -v "$HOME/.config/gcloud:/home/.config/gcloud" \
+    -v "$PWD:/workspace" \
+    -e HOME=/home -w /workspace "$IMG" "$@"
+}
+for ((i=1; i<=TRIES; i++)); do
+  out=$(run "$@" 2>&1); rc=$?
+  if [[ $rc -ne 0 && "$out" == *"failed endpoint connection check"*"Unavailable"* && $i -lt $TRIES ]]; then
+    echo "ul-cli: endpoint unavailable, retry $i/$((TRIES-1))..." >&2; sleep $((i < 4 ? i : 4)); continue
+  fi
+  printf '%s\n' "$out"; exit $rc
+done

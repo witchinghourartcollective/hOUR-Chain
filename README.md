@@ -20,6 +20,7 @@ Pre-alpha protocol definition. Chain direction (see [ADR-0005](docs/ADR-0005-cos
 - **hOUR Chain L1:** a Cosmos SDK chain with EVM compatibility ([`cosmos/evm`](https://github.com/cosmos/evm) v0.7.0) and IBC, chosen on Chainlink's recommendation. **Devnet scaffold only** in [`chain/`](chain/); not audited, no public testnet or mainnet.
 - **Filecoin:** durable evidence/archive layer in [`hour-chain-filecoin`](https://github.com/witchinghourartcollective/hour-chain-filecoin).
 - **Bitcoin Lightning:** payment adapter. **Planned.**
+- **GCUL (Google Cloud Universal Ledger):** settlement adapter. Accounts and a test transfer are verified on the no-value `integration-testing` network; the adapter is **not implemented**. See [GCUL-INTEGRATION-TESTING.md](docs/GCUL-INTEGRATION-TESTING.md).
 - **Open decisions:** token model and validator model (ADR-0005). Chainlink CCIP does not support Cosmos/IBC chains, so the CCIP route (onboard HBC as an EVM chain, or go through Base) is also open.
 
 [ADR-0008](docs/ADR-0008-solana-filecoin-ibc.md) restores Solana consent/attestations as an active major workstream alongside the Cosmos EVM L1, Filecoin evidence, and existing Base integrations. This lifts the development pause; it does not claim these components are deployed or IBC-connected. See the [live-readiness checklist](docs/LIVE-READINESS.md).
