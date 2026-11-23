@@ -47,5 +47,6 @@ A user account's balance can be read only when the query is signed by that accou
 
 ## Next steps
 
-1. Design the adapter mapping and reconciliation against the [real-hours model](TIME-CONTRIBUTIONS.md).
-2. Apply for `user-testing` access (gcul-help@google.com) once the adapter design exists.
+1. Adapter design: proposed in [ADR-0009](ADR-0009-gcul-settlement-adapter.md) (mapping, payment-level idempotency, reconciliation).
+2. Apply for `user-testing` access (gcul-help@google.com) with ADR-0009 and the evidence above.
+3. Verify contract v2 (atomic payable `settle()`) on integration-testing, per ADR-0009's implementation plan.
