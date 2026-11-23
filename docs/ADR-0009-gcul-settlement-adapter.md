@@ -1,6 +1,6 @@
 # ADR-0009: GCUL settlement adapter: mapping, idempotency and reconciliation
 
-Status: Proposed (2026-11-23). Design only: nothing in this document is implemented except the v1 receipt contract described in [GCUL-INTEGRATION-TESTING.md](GCUL-INTEGRATION-TESTING.md). It does not change the token model, the chain architecture (ADR-0005), or Base as the canonical Phase 1 settlement network (ADR-0001).
+Status: Proposed (2026-11-23). Design only: nothing in this document is implemented except the v1 receipt contract described in [GCUL-INTEGRATION-TESTING.md](GCUL-INTEGRATION-TESTING.md). It does not change the token model or chain architecture: ADR-0005 and ADR-0008 assign canonical settlement state to the Cosmos EVM hOUR Chain, with Base retained for external settlement and bridge integrations.
 
 ## Context
 
@@ -46,7 +46,7 @@ The adapter never creates, edits or approves contributions, agreements or obliga
 
 `settlement_id = "hst1_" + hex(sha256(instructionEventId || ":" || legIndex))[0:40]`
 
-The settlement ID is deterministic: the same instruction and leg always produce the same ID. Retries, restarts and a second adapter instance therefore converge on one ID instead of minting a new one. It is also opaque: it reveals nothing about the work, the people or the rates.
+The settlement ID is deterministic: the same instruction and leg always produce the same ID. Retries, restarts and a second adapter instance therefore converge on one ID instead of minting a new one. It is also opaque: it reveals nothing about the work, the people or the rates. Before submission, persist an immutable assignment of each `settlement_id` to its GCUL network and contract ID in the durable leg table. Concurrent workers must agree on that assignment; retries, lookups and reconciliation always use it, never the currently active contract. Retain the assignment across rollover and replay of old instructions; if it is unavailable, stop rather than assign the leg to a new contract.
 
 | hOUR record field | GCUL v2 contract field | Notes |
 | --- | --- | --- |
@@ -84,21 +84,21 @@ A failed GCUL method makes no state changes, so a replayed `settlement_id` fails
 | --- | --- | --- |
 | `PLANNED` | Leg derived from a signed instruction | `APPROVED`, `CANCELLED` |
 | `APPROVED` | Instruction approvals and referenced versions verified; simulation passed | `SUBMITTING` |
-| `SUBMITTING` | Intent persisted; transaction about to be sent | `CONFIRMED`, `REJECTED_DUPLICATE`, `FAILED`, `UNKNOWN` |
-| `UNKNOWN` | Timeout or crash; outcome not known | `CONFIRMED`, `FAILED` (only via ledger lookup) |
-| `CONFIRMED` | Receipt found on-ledger and fields match | `RECONCILED` |
-| `REJECTED_DUPLICATE` | Ledger says already settled | `CONFIRMED` once the existing receipt matches; otherwise `DISPUTED` |
-| `FAILED` | Ledger rejected for another reason; no receipt exists | `APPROVED` (retry, same `settlement_id`) |
-| `RECONCILED` | Passed reconciliation; receipt event emitted | terminal |
+| `SUBMITTING` | Intent persisted; transaction about to be sent | `CONFIRMED`, `REJECTED_DUPLICATE`, `FAILED`, `UNKNOWN`, `DISPUTED` |
+| `UNKNOWN` | Timeout or crash; outcome not known | `CONFIRMED`, `FAILED` (only with conclusive ledger evidence), `DISPUTED` |
+| `CONFIRMED` | Finalized atomic payment and matching on-ledger receipt verified | `RECONCILED`, `DISPUTED` |
+| `REJECTED_DUPLICATE` | Ledger says already settled | `CONFIRMED` after matching receipt and payment evidence; `UNKNOWN` if inconclusive; `DISPUTED` on mismatch |
+| `FAILED` | Prior attempt conclusively did not settle and cannot still settle | `APPROVED` (retry, same `settlement_id`), `UNKNOWN` if subsequent lookup is inconclusive |
+| `RECONCILED` | Passed reconciliation; signed receipt event persisted in outbox | terminal for payment; publication continues independently; `DISPUTED` on a later proven mismatch |
 | `DISPUTED` | Mismatch; needs human review | correction flow (section 5) |
 
 Rules:
 
-1. **Never retry blind.** Before any retry, from `UNKNOWN` or `FAILED`, the adapter queries `is_recorded(settlement_id)`. If it is recorded, the leg goes to `CONFIRMED`. Because a replay fails atomically, even a mistaken resubmission cannot pay twice.
+1. **Never retry blind.** Before any retry, from `UNKNOWN` or `FAILED`, the adapter queries `is_recorded(settlement_id)` on the assigned network and contract. A recorded ID alone is not confirmation: verify the matching receipt and finalized transaction-specific payment evidence under the verified atomic v2 contract (section 4). If the outcome or evidence is inconclusive, remain `UNKNOWN` and do not retry. Retry only after authoritative evidence establishes that the prior attempt did not settle and cannot still settle. Because a replay on the same verified atomic contract fails, a mistaken resubmission cannot pay twice.
 2. **One submitter per leg.** The adapter takes a row lock or lease on `SUBMITTING`, so a second worker cannot submit the same leg concurrently. The contract still catches any slip.
 3. **Same ID forever.** A retry always reuses the deterministic `settlement_id`. A genuinely new payment requires a new signed instruction.
 
-**Fallback (if atomic settle proves unavailable):** a two-transaction flow. Record the receipt first as a reservation, then transfer with the `settlement_id` in the transfer reference, under the same write-ahead log. An `UNKNOWN` transfer is resolved by comparing the payer's sequence number and balance delta with the log before any retry. This is weaker and is used only if section 3's primary mechanism fails verification.
+**No two-transaction fallback:** a reservation is not evidence of payment, and payer sequence numbers or balance deltas cannot identify a particular transfer. If atomic settle is unavailable or unverified, do not submit payments through this adapter. Any uncertain transfer remains `UNKNOWN` without automatic retry until conclusive transaction-specific evidence is available.
 
 ### 4. Reconciliation
 
@@ -108,22 +108,24 @@ The adapter runs a three-way comparison after every submission and in a daily fu
 | --- | --- |
 | **Expected:** hOUR settlement instruction events | Legs, payees, amounts, refs |
 | **Attempted:** adapter leg table | State, tx hashes, timestamps |
-| **Actual:** GCUL contract state and account balances | Receipts and movements of funds |
+| **Actual:** authorized GCUL contract and transaction evidence | Finalized receipt and payment for the assigned contract, transaction and settlement ID |
+
+The actual source must provide authorized, finalized transaction-specific evidence linking the assigned network and contract, `settlement_id`, payer, payee, amount and atomic payment to the receipt. Verify the GCUL lookup, authorization, finality and atomic transfer semantics on integration-testing before relying on them; if they are unavailable or inconclusive, leave the leg `UNKNOWN` and do not issue a confirmed receipt or retry automatically. The operator cannot read a payee's balance without that payee signing the query. Balances are optional secondary checks only, with authorized access and all other credits and debits accounted for; they do not prove an individual settlement.
 
 Checks:
 
-1. Every `APPROVED`-or-later leg has exactly one on-ledger receipt, and every receipt has exactly one leg. A receipt with no leg is an **orphan** and raises an alert.
+1. Every `CONFIRMED` or `RECONCILED` leg has exactly one matching on-ledger receipt, and every receipt has exactly one leg assigned to that network and contract. A receipt with no leg is an **orphan** and raises an alert. `PLANNED` and `APPROVED` legs need no receipt; resolve `SUBMITTING`, `UNKNOWN` and `FAILED` according to the state machine, without treating an absent receipt alone as a mismatch.
 2. Receipt fields equal the instruction exactly: payee, `amount_minor`, `contribution_ref`, `agreement_ref`, `instruction_id`.
 3. The referenced contribution and agreement versions were approved before the instruction's `issuedAt` and have not been superseded by a dispute.
-4. The operator account's balance delta over the window equals the sum of settled `amount_minor`. Per payee, the received amount equals the sum of that payee's legs.
-5. The contract's `receipt_count` equals the number of confirmed legs for that contract.
+4. The finalized transaction-specific payment evidence matches the receipt and instruction for each confirmed leg; unrelated account movements are not settlement evidence.
+5. The contract's `receipt_count` equals the number of its on-ledger receipts, including any associated with unresolved legs or identified as orphans.
 
-On success the adapter emits a signed **settlement receipt event** (hOUR envelope, `network: "gcul"`). It carries the instruction ID, `settlement_id`, GCUL transaction hash, contract ID, finality status, and reconciliation run ID. Any failed check moves the leg to `DISPUTED` and emits a dispute event. Nothing is overwritten.
+On success the adapter creates a signed **settlement receipt event** (hOUR envelope, `network: "gcul"`). It carries the instruction ID, `settlement_id`, GCUL transaction hash, contract ID, finality status, and reconciliation run ID. Persist the signed event and its event ID in a transactional outbox atomically with the `RECONCILED` transition. An independent publisher retries the same event ID until publication is acknowledged, including after a crash; consumers deduplicate by event ID. A proven mismatch moves the leg to `DISPUTED` and emits a dispute event; missing or inconclusive evidence follows the recovery rules instead. Nothing is overwritten.
 
 ### 5. Corrections, reversals and disputes
 
 - Receipts are immutable on-ledger and in hOUR.
-- A reversal or correction is a **new** signed instruction that references the original (`reverses: <instructionEventId>`). It gets new legs with new `settlement_id`s, and money moves back from payee to operator only with the payee's approval.
+- A correction is a **new** signed instruction that references the original (`reverses: <instructionEventId>`), with new legs and `settlement_id`s. Refunds from payee to operator are outside this adapter: owner-only `settle()` cannot debit the payee. A future refund path requires a separate payee-authorized design and must not be represented as an executed refund here.
 - A disputed contribution or agreement version blocks new instructions that reference it. It does not alter receipts that already exist; it starts the correction flow.
 
 ### 6. Custody, roles and security disclosure
@@ -134,7 +136,7 @@ On success the adapter emits a signed **settlement receipt event** (hOUR envelop
 
 ### 7. Limits
 
-- All contract fields share about 5 MiB, which is roughly 10–15k v2 receipts. Production should roll to a new contract per period (the adapter tracks the active contract ID) or move receipts into per-payee account fields.
+- All contract fields share about 5 MiB, which is roughly 10–15k v2 receipts. Production should roll to a new contract per period or move receipts into per-payee account fields. A new active contract is assigned only to new legs; existing network/contract assignments remain immutable and retained for recovery and reconciliation.
 - Computation per transaction is capped network-wide. A single `settle()` call per leg stays well inside it.
 - Real-value settlement requires a Currency Operator and Google approval for `user-testing` and then mainnet.
 
@@ -142,10 +144,10 @@ On success the adapter emits a signed **settlement receipt event** (hOUR envelop
 
 | Interface | GCUL adapter behaviour |
 | --- | --- |
-| `simulate(instruction)` | Validate the instruction signature, approvals and referenced versions; derive legs and `settlement_id`s; check payee accounts and roles, operator balance, and `is_recorded` for each leg; no submission. Optionally build each transaction with `--sign-only` without submitting it. |
+| `simulate(instruction)` | Validate the instruction signature, approvals and referenced versions; derive legs and `settlement_id`s; check payee accounts and roles, operator balance, and `is_recorded` on each leg's assigned contract; no submission. Optionally build each transaction with `--sign-only` without submitting it. |
 | `approve(instruction)` | Record the required approvals; legs move to `APPROVED`. |
 | `submit(leg)` | Write-ahead `SUBMITTING`, then call `settle()` once; map the result to the states in section 3. |
-| `receipt(leg)` | Read the on-ledger receipt, run reconciliation, emit the signed hOUR receipt event. |
+| `receipt(leg)` | Read the assigned contract's receipt and payment evidence, run reconciliation, and persist the signed hOUR receipt event in the outbox for publication. |
 
 ## Pilot mapping (TIME-CONTRIBUTIONS.md)
 
@@ -163,14 +165,14 @@ On success the adapter emits a signed **settlement receipt event** (hOUR envelop
 
 1. **Contract v2 on integration-testing:** add `settle()` (payable, atomic) plus `instruction_id`. Verify payment, forwarding to the payee, duplicate rejection with no movement of funds, and the non-owner rejection. Keep v1 deployed as the historical test.
 2. **Schema:** add `"gcul"` to the event-envelope `network` enum and define the instruction and receipt payload schemas (legs, `settlement_id`, refs, finality).
-3. **Adapter service:** leg table with a unique `settlement_id`, the state machine, the four interfaces, and KMS signing through the `ul-cli` or API client.
-4. **Reconciliation job** with the checks in section 4, plus fault-injection tests: crash after submit, timeout, duplicate worker, orphan receipt, amount mismatch.
+3. **Adapter service:** leg table with a unique `settlement_id` and immutable network/contract assignment, the state machine, transactional receipt outbox, the four interfaces, and KMS signing through the `ul-cli` or API client.
+4. **Reconciliation job** with the checks in section 4, plus fault-injection tests: crash after submit or outbox commit, timeout, rollover with an unresolved leg, duplicate worker, orphan receipt, amount mismatch and unrelated account movements.
 5. **Pilot run** on integration-testing covering the criteria above, reported as simulated.
 6. **Apply for `user-testing`** with this ADR and the pilot evidence. Then mainnet and a Currency Operator.
 
 ## Open questions (for Google where noted)
 
 1. Does `@gcul.payable` with `native_transfer` work with the network's test currency on integration-testing, and which roles does the contract account need? *(Google)*
-2. Does GCUL offer client idempotency keys or lookup of a transaction by hash? Either would simplify `UNKNOWN` resolution. *(Google)*
+2. Does GCUL offer authorized finalized transaction lookup and settlement-specific payment evidence, including for a lost submission response? What proves an attempt cannot still settle? Client idempotency keys may also simplify `UNKNOWN` resolution. *(Google)*
 3. What does a Currency Operator arrangement require for USD-denominated creator payouts? *(Google)*
 4. How are payees without GCUL accounts onboarded? Options include the account manager creating `USR` accounts for them, or settling those legs on Base instead.
