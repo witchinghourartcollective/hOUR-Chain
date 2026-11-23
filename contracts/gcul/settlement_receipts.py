@@ -7,7 +7,8 @@ approve time, or decide rights: those stay in their own systems.
 
 Guarantees:
 - Only the contract owner (the hOUR settlement operator) can record receipts.
-- A settlement ID can be recorded once (idempotency / duplicate-payment guard).
+- A settlement ID can be recorded once (receipt deduplication only; payment-level
+  idempotency is the settlement adapter's responsibility).
 - Every receipt carries the contribution ID, agreement ID, payee, amount in
   minor units, and an external payment reference for reconciliation.
 """

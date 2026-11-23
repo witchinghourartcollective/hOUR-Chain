@@ -4,7 +4,7 @@
 
 Test contract for the GCUL settlement adapter. It is an owner-only, append-only registry that links each settlement ID to an approved contribution ID, an agreement ID, the payee, the amount in minor units, and an external payment reference.
 
-The contract moves no funds, and it does not approve time or rights. A settlement ID can be recorded only once, which guards against duplicate payment. This follows the adapter requirements in [TIME-CONTRIBUTIONS.md](../../docs/TIME-CONTRIBUTIONS.md).
+The contract moves no funds, and it does not approve time or rights. A settlement ID can be recorded only once, which deduplicates receipts but does not prevent duplicate external payments. Payment-level idempotency is the settlement adapter's responsibility. This follows the adapter requirements in [TIME-CONTRIBUTIONS.md](../../docs/TIME-CONTRIBUTIONS.md).
 
 Storage limit: all contract fields share about 5 MiB. That is fine for testing, but production needs pruning, sharding, or account fields.
 
@@ -41,4 +41,4 @@ ul-cli --timeout 90s contracts invoke --alias hour_settlement_receipts \
 ul-cli --timeout 90s accounts describe --alias hour_settlement_receipts --sender hour_chain_owner
 ```
 
-Run the same invoke a second time to check idempotency: it must fail with `Duplicate settlement_id`.
+Run the same invoke a second time to check receipt deduplication: it must fail with `Duplicate settlement_id`.
