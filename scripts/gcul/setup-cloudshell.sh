@@ -62,6 +62,13 @@ else
     --contract-id 1:CTR:005mhiWQhcWooM7uV2zjaqPcVDswoqTA7KTehA9LNgid6 | tail -1
 fi
 
+if grep -q '"hour_settlement_v2"' <<<"$existing"; then
+  echo "   hour_settlement_v2 already registered"
+else
+  ul-cli contracts register --alias hour_settlement_v2 \
+    --contract-id 1:CTR:005788bGkaVpczkhPsWCfVfToTxywz15AiZG5fVD1f769 | tail -1
+fi
+
 echo "==> connectivity check"
 ul-cli --timeout 90s accounts describe --alias hour_chain_owner --sender hour_chain_owner | grep -E 'Account:|Balance|status' || true
 

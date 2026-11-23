@@ -1,6 +1,6 @@
 # ADR-0009: GCUL settlement adapter: mapping, idempotency and reconciliation
 
-Status: Proposed (2026-11-23). Design only: nothing in this document is implemented except the v1 receipt contract described in [GCUL-INTEGRATION-TESTING.md](GCUL-INTEGRATION-TESTING.md). It does not change the token model or chain architecture: ADR-0005 and ADR-0008 assign canonical settlement state to the Cosmos EVM hOUR Chain, with Base retained for external settlement and bridge integrations.
+Status: Proposed (2026-11-23). The adapter remains a design; the v1 receipt and v2 atomic settlement test contracts are implemented as described in [GCUL-INTEGRATION-TESTING.md](GCUL-INTEGRATION-TESTING.md). It does not change the token model or chain architecture: ADR-0005 and ADR-0008 assign canonical settlement state to the Cosmos EVM hOUR Chain, with Base retained for external settlement and bridge integrations.
 
 ## Context
 
@@ -10,6 +10,7 @@ Verified so far on the no-value `integration-testing` network:
 
 - Accounts, KMS-backed signing, and a 100-unit transfer between user accounts.
 - The v1 `SettlementReceipts` contract ([`contracts/gcul/settlement_receipts.py`](../contracts/gcul/settlement_receipts.py)). It recorded a receipt and rejected a repeated settlement ID.
+- The v2 contract forwarded a test payment and recorded a receipt; a replay and an amount mismatch failed without moving funds.
 
 The v1 contract only deduplicates receipts. Paying and recording are separate transactions, so a payment can still be sent twice. Payment-level idempotency belongs to the adapter, and this ADR designs it.
 
@@ -76,7 +77,7 @@ def settle(self, settlement_id: str, instruction_id: str, contribution_ref: str,
     return self.receipt_count
 ```
 
-A failed GCUL method makes no state changes, so a replayed `settlement_id` fails the whole transaction and **no funds move**. This turns receipt deduplication into payment deduplication on the ledger itself, independent of adapter bugs. The language reference documents `@gcul.payable`, `gcul.payment` and `native_transfer`. A minimal version of this method compiles with `gculpyc` v0.2.0 (checked 2026-11-23). Its runtime behaviour with the network's test currency must still be verified on integration-testing (plan step 1).
+A failed GCUL method makes no state changes, so a replayed `settlement_id` fails the whole transaction and **no funds move**. This turns receipt deduplication into payment deduplication on the ledger itself, independent of adapter bugs. The language reference documents `@gcul.payable`, `gcul.payment` and `native_transfer`. The v2 contract compiled and its test payment, replay and amount mismatch were verified on integration-testing (2026-11-23); see [GCUL-INTEGRATION-TESTING.md](GCUL-INTEGRATION-TESTING.md).
 
 **Adapter write-ahead log.** The adapter keeps a durable leg table keyed by `settlement_id` with a unique constraint. Every state change is written before the action it describes:
 
@@ -97,6 +98,8 @@ Rules:
 1. **Never retry blind.** Before any retry, from `UNKNOWN` or `FAILED`, the adapter queries `is_recorded(settlement_id)` on the assigned network and contract. A recorded ID alone is not confirmation: verify the matching receipt and finalized transaction-specific payment evidence under the verified atomic v2 contract (section 4). If the outcome or evidence is inconclusive, remain `UNKNOWN` and do not retry. Retry only after authoritative evidence establishes that the prior attempt did not settle and cannot still settle. Because a replay on the same verified atomic contract fails, a mistaken resubmission cannot pay twice.
 2. **One submitter per leg.** The adapter takes a row lock or lease on `SUBMITTING`, so a second worker cannot submit the same leg concurrently. The contract still catches any slip.
 3. **Same ID forever.** A retry always reuses the deterministic `settlement_id`. A genuinely new payment requires a new signed instruction.
+
+Verified on integration-testing (2026-11-23): a replay and an amount mismatch both failed with no funds moved. Failed transactions still advance the sender's sequence number, so section 3's rules must never infer payment from a sequence advance.
 
 **No two-transaction fallback:** a reservation is not evidence of payment, and payer sequence numbers or balance deltas cannot identify a particular transfer. If atomic settle is unavailable or unverified, do not submit payments through this adapter. Any uncertain transfer remains `UNKNOWN` without automatic retry until conclusive transaction-specific evidence is available.
 
@@ -172,7 +175,7 @@ On success the adapter creates a signed **settlement receipt event** (hOUR envel
 
 ## Open questions (for Google where noted)
 
-1. Does `@gcul.payable` with `native_transfer` work with the network's test currency on integration-testing, and which roles does the contract account need? *(Google)*
+1. ~~Does `@gcul.payable` with `native_transfer` work with the network's test currency?~~ **Yes**, verified 2026-11-23 with contract v2 on integration-testing. The contract account needed no extra roles. See [GCUL-INTEGRATION-TESTING.md](GCUL-INTEGRATION-TESTING.md).
 2. Does GCUL offer authorized finalized transaction lookup and settlement-specific payment evidence, including for a lost submission response? What proves an attempt cannot still settle? Client idempotency keys may also simplify `UNKNOWN` resolution. *(Google)*
 3. What does a Currency Operator arrangement require for USD-denominated creator payouts? *(Google)*
 4. How are payees without GCUL accounts onboarded? Options include the account manager creating `USR` accounts for them, or settling those legs on Base instead.
