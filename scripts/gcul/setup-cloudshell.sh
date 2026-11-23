@@ -54,6 +54,14 @@ for alias in "${!ACCOUNTS[@]}"; do
   fi
 done
 
+echo "==> registering contract aliases"
+if grep -q '"hour_settlement_receipts"' <<<"$existing"; then
+  echo "   hour_settlement_receipts already registered"
+else
+  ul-cli contracts register --alias hour_settlement_receipts \
+    --contract-id 1:CTR:005mhiWQhcWooM7uV2zjaqPcVDswoqTA7KTehA9LNgid6 | tail -1
+fi
+
 echo "==> connectivity check"
 ul-cli --timeout 90s accounts describe --alias hour_chain_owner --sender hour_chain_owner | grep -E 'Account:|Balance|status' || true
 

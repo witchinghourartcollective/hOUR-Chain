@@ -6,7 +6,8 @@ Google Cloud Universal Ledger (GCUL) is planned as a **settlement adapter** for 
 
 - **Network:** `integration-testing` endpoint, project `hour-blockchain`, region `us-east4`. This network carries **no real value**.
 - **Verified:** CLI setup, account registration, account queries, and one test token transfer between two user accounts.
-- **Not verified:** smart contracts, the settlement adapter itself, idempotency/reconciliation, mapping to contribution and agreement IDs.
+- **Deployed:** settlement-receipt test contract `1:CTR:005mhiWQhcWooM7uV2zjaqPcVDswoqTA7KTehA9LNgid6` (alias `hour_settlement_receipts`, source [`contracts/gcul/settlement_receipts.py`](../contracts/gcul/settlement_receipts.py), bytecode sha256 `50792af6…d000f`), deployed 2026-11-23 by `hour_chain_owner`. The empty initial state was read back from the ledger.
+- **Not verified:** recording receipts on-ledger, the settlement adapter itself, idempotency/reconciliation, mapping to contribution and agreement IDs.
 - **Not available yet:** `user-testing` and mainnet need Google approval. Real-value tokens need a Currency Operator.
 
 ## Accounts
@@ -45,6 +46,6 @@ A user account's balance can be read only when the query is signed by that accou
 
 ## Next steps
 
-1. Get the contract toolchain working (`gculpyc`) and deploy a minimal settlement-receipt contract on integration-testing. The receipt should reference a contribution ID and an agreement ID, and it should reject duplicate settlement IDs.
+1. Record the first receipt on the deployed contract and confirm that a repeat of the same settlement ID is rejected (commands in [contracts/gcul/README.md](../contracts/gcul/README.md)).
 2. Design the adapter mapping and reconciliation against the [real-hours model](TIME-CONTRIBUTIONS.md).
 3. Apply for `user-testing` access (gcul-help@google.com) once the adapter design exists.
