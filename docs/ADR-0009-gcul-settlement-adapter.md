@@ -48,6 +48,7 @@ The adapter never creates, edits or approves contributions, agreements or obliga
 
 The settlement ID is deterministic: the same instruction and leg always produce the same ID. Retries, restarts and a second adapter instance therefore converge on one ID instead of minting a new one. It is also opaque: it reveals nothing about the work, the people or the rates.
 
+
 | hOUR record field | GCUL v2 contract field | Notes |
 | --- | --- | --- |
 | derived as above | `settlement_id` | Primary key and duplicate guard |
@@ -98,7 +99,9 @@ Rules:
 2. **One submitter per leg.** The adapter takes a row lock or lease on `SUBMITTING`, so a second worker cannot submit the same leg concurrently. The contract still catches any slip.
 3. **Same ID forever.** A retry always reuses the deterministic `settlement_id`. A genuinely new payment requires a new signed instruction.
 
-**Fallback (if atomic settle proves unavailable):** a two-transaction flow. Record the receipt first as a reservation, then transfer with the `settlement_id` in the transfer reference, under the same write-ahead log. An `UNKNOWN` transfer is resolved by comparing the payer's sequence number and balance delta with the log before any retry. This is weaker and is used only if section 3's primary mechanism fails verification.
+Verified on integration-testing (2026-11-23): a replay and an amount mismatch both failed with no funds moved. Failed transactions still advance the sender's sequence number, so section 3's rules must never infer payment from a sequence advance.
+
+**Fallback (not needed: atomic settle works on integration-testing):** a two-transaction flow. Record the receipt first as a reservation, then transfer with the `settlement_id` in the transfer reference, under the same write-ahead log. An `UNKNOWN` transfer is resolved by comparing the payer's sequence number and balance delta with the log before any retry. This is weaker and is used only if section 3's primary mechanism fails verification.
 
 ### 4. Reconciliation
 
@@ -170,7 +173,7 @@ On success the adapter emits a signed **settlement receipt event** (hOUR envelop
 
 ## Open questions (for Google where noted)
 
-1. Does `@gcul.payable` with `native_transfer` work with the network's test currency on integration-testing, and which roles does the contract account need? *(Google)*
+1. ~~Does `@gcul.payable` with `native_transfer` work with the network's test currency?~~ **Yes**, verified 2026-11-23 with contract v2 on integration-testing. The contract account needed no extra roles. See [GCUL-INTEGRATION-TESTING.md](GCUL-INTEGRATION-TESTING.md).
 2. Does GCUL offer client idempotency keys or lookup of a transaction by hash? Either would simplify `UNKNOWN` resolution. *(Google)*
 3. What does a Currency Operator arrangement require for USD-denominated creator payouts? *(Google)*
 4. How are payees without GCUL accounts onboarded? Options include the account manager creating `USR` accounts for them, or settling those legs on Base instead.

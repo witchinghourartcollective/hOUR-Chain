@@ -8,6 +8,11 @@ Google Cloud Universal Ledger (GCUL) is planned as a **settlement adapter** for 
 - **Verified:** CLI setup, account registration, account queries, and one test token transfer between two user accounts.
 - **Deployed:** settlement-receipt test contract `1:CTR:005mhiWQhcWooM7uV2zjaqPcVDswoqTA7KTehA9LNgid6` (alias `hour_settlement_receipts`, source [`contracts/gcul/settlement_receipts.py`](../contracts/gcul/settlement_receipts.py), bytecode sha256 `50792af6…d000f`), deployed 2026-11-23 by `hour_chain_owner`. The empty initial state was read back from the ledger.
 - **Verified on-ledger (2026-11-23):** receipt `hour-test-0001` was recorded, linking `contrib-test-0001` / `agree-test-0001` to payee `hour_chain_user2`, 100 minor units, and payment ref `70fed00b…3497` (the test transfer). A repeat of the same settlement ID was rejected with `FAILED_PRECONDITION: Duplicate settlement_id`, and `receipt_count` stayed at 1.
+- **Atomic settlement verified on-ledger (2026-11-23):** contract v2 `1:CTR:005788bGkaVpczkhPsWCfVfToTxywz15AiZG5fVD1f769` (alias `hour_settlement_v2`, source [`contracts/gcul/settlement_receipts_v2.py`](../contracts/gcul/settlement_receipts_v2.py), bytecode sha256 `3c0d1469…1f19`).
+  - `settle` `hst1_test_0001` with a 100 payment (tx `7f00df8f864f7d30c2cd16a345c352d0aebe9eb9b83ba66d8d2f7809bf778730`, round 5050653): `hour_chain_user2` went from 101 to 201 and `hour_chain_owner` from 2147483546 to 2147483446. The receipt was recorded in the same transaction, so `@gcul.payable` and `native_transfer` work with the DEM test currency.
+  - Replaying the same settlement ID failed with `FAILED_PRECONDITION: Duplicate settlement_id`, and both balances were unchanged.
+  - A payment of 100 claimed as `amount_minor=150` failed with `Payment does not match amount_minor`, and both balances were unchanged.
+  - Failed transactions still consume the sender's sequence number (8 to 9 to 10) without moving funds. The adapter must not treat a sequence advance as proof of payment.
 - **Not verified:** the settlement adapter itself, automated reconciliation, mapping from real contribution and agreement records.
 - **Not available yet:** `user-testing` and mainnet need Google approval. Real-value tokens need a Currency Operator.
 
@@ -49,4 +54,4 @@ A user account's balance can be read only when the query is signed by that accou
 
 1. Adapter design: proposed in [ADR-0009](ADR-0009-gcul-settlement-adapter.md) (mapping, payment-level idempotency, reconciliation).
 2. Apply for `user-testing` access (gcul-help@google.com) with ADR-0009 and the evidence above.
-3. Verify contract v2 (atomic payable `settle()`) on integration-testing, per ADR-0009's implementation plan.
+3. Next per ADR-0009: add `"gcul"` to the envelope `network` enum, then build the adapter service and reconciliation job.
