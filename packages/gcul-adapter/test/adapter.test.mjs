@@ -18,9 +18,12 @@ const PAYEE = '1:USR:DEM:payee';
 const PAYEE2 = '1:USR:DEM:payee2';
 const SIGNER = 'hour:operator#k1';
 const keys = generateTestKeyPair();
+const collaboratorKeys = generateTestKeyPair();
 const APPROVED = new Set(['contrib-1@3', 'agree-1@2', 'evt-obligation-0001', 'evt-approval-0001']);
+// What the obligation evt-obligation-0001 says must be paid (stands in for a registry-derived expectedLegs).
+const OBLIGATED_LEGS = [{ legIndex: 0, payee: PAYEE, amountMinor: 100 }, { legIndex: 1, payee: PAYEE2, amountMinor: 250 }];
 
-function instruction(eventId = 'evt-instruction-0001', patch = {}, { key = keys.privateKey } = {}) {
+function instruction(eventId = 'evt-instruction-0001', patch = {}, { key = keys.privateKey, signer = SIGNER, actor = 'hour:operator' } = {}) {
   const payload = {
     network: 'gcul',
     currency: 'DEM',
@@ -36,12 +39,12 @@ function instruction(eventId = 'evt-instruction-0001', patch = {}, { key = keys.
     protocolVersion: '0.2',
     schemaVersion: '1',
     eventType: 'settlement.instruction',
-    actor: 'hour:operator',
+    actor,
     subject: 'contrib-1',
     issuedAt: '2026-11-24T10:00:00.000Z',
     payloadHash: payloadHash(payload),
     network: 'gcul',
-  }, key, { signer: SIGNER });
+  }, key, { signer });
   return { envelope, payload };
 }
 
@@ -51,8 +54,10 @@ function setup({ storePath = ':memory:', balance = 10_000, workerId = 'w1', ledg
   const store = new LegStore(storePath);
   const adapter = new GculSettlementAdapter({
     store, ledger, operator: OPERATOR, contractAlias: ALIAS, contractId: '1:CTR:test', currency: 'DEM',
-    resolveKey: (signer) => (signer === SIGNER ? keys.publicKey : null),
+    resolveKey: (signer) => (signer === SIGNER ? keys.publicKey : signer === 'artist#k1' ? collaboratorKeys.publicKey : null),
     isApproved: (ref) => APPROVED.has(ref),
+    instructionSigners: ['hour:operator'],
+    expectedLegs: (p) => (p.obligationRef === 'evt-obligation-0001' ? OBLIGATED_LEGS : null),
     workerId,
   });
   return { adapter, store, ledger };
@@ -263,6 +268,20 @@ test('instructions that fail verification plan nothing', async () => {
     await assert.rejects(adapter.approve(ins), pattern, name);
   }
   assert.equal(store.list().length, 0);
+});
+
+test('a trusted collaborator cannot instruct a payment, and an operator cannot redirect one', async () => {
+  const { adapter, store, ledger } = setup();
+  const byCollaborator = instruction('evt-instruction-0101', {}, { key: collaboratorKeys.privateKey, signer: 'artist#k1', actor: 'artist' });
+  await assert.rejects(adapter.approve(byCollaborator), /artist may not sign settlement instructions/);
+  const redirected = instruction('evt-instruction-0102', { legs: [{ legIndex: 0, payee: '1:USR:DEM:attacker', amountMinor: 100 },
+    { legIndex: 1, payee: PAYEE2, amountMinor: 250 }] });
+  await assert.rejects(adapter.approve(redirected), /do not match the expected payee accounts and amounts/);
+  const inflated = instruction('evt-instruction-0103', { legs: [{ legIndex: 0, payee: PAYEE, amountMinor: 1000 },
+    { legIndex: 1, payee: PAYEE2, amountMinor: 250 }] });
+  await assert.rejects(adapter.approve(inflated), /do not match/);
+  assert.equal(store.list().length, 0);
+  assert.equal(ledger.settleCalls, 0);
 });
 
 test('state machine refuses transitions outside ADR-0009', async () => {

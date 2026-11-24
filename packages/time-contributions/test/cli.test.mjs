@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { importPublicKey } from '../../pqc-profile/src/index.mjs';
 import { GculSettlementAdapter, LegStore, FakeLedger, STATES } from '../../gcul-adapter/src/index.mjs';
-import { DurableRegistry } from '../src/index.mjs';
+import { DurableRegistry, expectedLegs } from '../src/index.mjs';
 
 const BIN = fileURLToPath(new URL('../bin/hour-time.mjs', import.meta.url));
 
@@ -84,7 +84,8 @@ test('hour-time runs the real-hours workflow end to end', async () => {
     const ledger = new FakeLedger({ operator: 'op', balances: { op: 100_000 } });
     ledger.deploy('v2');
     const adapter = new GculSettlementAdapter({ store: new LegStore(), ledger, operator: 'op', contractAlias: 'v2', contractId: '1:CTR:t',
-      currency: 'DEM', resolveKey, isApproved: (ref) => registry.isApproved(ref) });
+      currency: 'DEM', resolveKey, isApproved: (ref) => registry.isApproved(ref), instructionSigners: ['hour-operator'],
+      expectedLegs: expectedLegs(registry, { payeeAccount: (id) => (id === 'producer' ? '1:USR:DEM:producer' : null) }) });
     const [leg] = await adapter.approve(instruction);
     assert.equal((await adapter.submit(leg.settlementId)).state, STATES.CONFIRMED);
     assert.equal(ledger.balances['1:USR:DEM:producer'], 6000);

@@ -29,7 +29,11 @@ A rejected event changes nothing.
 
 ## Settlement
 
-`buildSettlementInstruction(registry, obligationEventId, { network, currency, payeeAccount })` returns a payload that matches `specs/payloads/settlement-instruction.schema.json`. The operator signs it as a `settlement.instruction` event. Pass `isApproved: (ref) => registry.isApproved(ref)` to `GculSettlementAdapter`, and the adapter will settle only obligations whose records are still approved.
+`buildSettlementInstruction(registry, obligationEventId, { network, currency, payeeAccount })` returns a payload that matches `specs/payloads/settlement-instruction.schema.json`. The operator signs it as a `settlement.instruction` event. Configure `GculSettlementAdapter` with:
+
+- `isApproved: (ref) => registry.isApproved(ref)`, so only obligations whose records are still approved are settled;
+- `instructionSigners: [operator identities]`, so collaborators cannot sign settlement instructions;
+- `expectedLegs: expectedLegs(registry, { payeeAccount })`, so the destination account and amount come from the obligation and your account mapping, never from the instruction.
 
 ## Command line: `hour-time`
 

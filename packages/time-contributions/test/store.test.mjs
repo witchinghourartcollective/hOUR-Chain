@@ -11,7 +11,7 @@ import canonicalize from 'canonicalize';
 import { createHash } from 'node:crypto';
 import { generateTestKeyPair, signEnvelope } from '../../pqc-profile/src/index.mjs';
 import {
-  DurableRegistry, StoreIntegrityError, RegistryError, STATUS, payloadHash, calculateObligation, buildSettlementInstruction, GENESIS,
+  DurableRegistry, StoreIntegrityError, RegistryError, STATUS, payloadHash, calculateObligation, buildSettlementInstruction, expectedLegs, GENESIS,
 } from '../src/index.mjs';
 import { GculSettlementAdapter, LegStore, FakeLedger, STATES } from '../../gcul-adapter/src/index.mjs';
 
@@ -165,7 +165,8 @@ test('the adapter settles from a reopened store and refuses a stale obligation',
   const ledger = new FakeLedger({ operator: 'op', balances: { op: 100_000 } });
   ledger.deploy('v2');
   const adapter = new GculSettlementAdapter({ store: new LegStore(), ledger, operator: 'op', contractAlias: 'v2', contractId: '1:CTR:t',
-    currency: 'DEM', resolveKey: options.resolveKey, isApproved: (ref) => registry.isApproved(ref) });
+    currency: 'DEM', resolveKey: options.resolveKey, isApproved: (ref) => registry.isApproved(ref), instructionSigners: ['hour-operator'],
+    expectedLegs: expectedLegs(registry, { payeeAccount: () => '1:USR:DEM:producer' }) });
   const [leg] = await adapter.approve(instruction);
 
   // A second process amends the claim before submission: the leg must be cancelled, not paid.
