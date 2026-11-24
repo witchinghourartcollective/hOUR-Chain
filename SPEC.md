@@ -80,7 +80,7 @@ See `docs/ADR-0002-post-quantum-native-cryptography.md`.
 
 ## Phase 1 settlement
 
-Per ADR-0005 (superseding ADR-0004), hOUR Chain is a Cosmos SDK L1 with EVM compatibility (`cosmos/evm`) and IBC; only a devnet scaffold exists (`chain/`). The token model and validator model are open decisions. Chainlink CCIP does not support Cosmos/IBC chains; the CCIP route (onboarding HBC as an EVM chain, or via Base) is open. Lightning is a planned adapter network. Cosmos/CometBFT validator keys (Ed25519) and EVM account keys (secp256k1) are not post-quantum, so the chain MUST NOT be described as end-to-end post-quantum, and hOUR-signed PQC records MUST be distinguished from the quantum security of chain-level signatures and any external settlement receipt.
+Per ADR-0005 (superseding ADR-0004), hOUR Chain is a Cosmos SDK L1 with EVM compatibility (`cosmos/evm`) and IBC; only a devnet scaffold exists (`chain/`). The token model and validator model are open decisions. Chainlink CCIP does not support Cosmos/IBC chains; the CCIP route (onboarding HBC as an EVM chain, or via Base) is open. Lightning is a planned adapter network. Google Cloud Universal Ledger (`gcul`) is an external settlement adapter network ([ADR-0009](docs/ADR-0009-gcul-settlement-adapter.md)); verified on its no-value integration-testing network only. Cosmos/CometBFT validator keys (Ed25519) and EVM account keys (secp256k1) are not post-quantum, so the chain MUST NOT be described as end-to-end post-quantum, and hOUR-signed PQC records MUST be distinguished from the quantum security of chain-level signatures and any external settlement receipt.
 
 ## State model
 

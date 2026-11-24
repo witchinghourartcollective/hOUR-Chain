@@ -1,0 +1,14 @@
+{
+  "instructionEventId": "evt-test-instruction-0001",
+  "legIndex": 0,
+  "settlementId": "hst1_5a9341184484eac1489b97d28719e1528d74474b",
+  "network": "gcul",
+  "networkTxRef": "7f00df8f864f7d30c2cd16a345c352d0aebe9eb9b83ba66d8d2f7809bf778730",
+  "contractId": "1:CTR:005788bGkaVpczkhPsWCfVfToTxywz15AiZG5fVD1f769",
+  "payee": "1:USR:DEM:022nXHgAmjMB8mXkdDcqA3HaR9D8EyXD6vAj6urJ7qJ68",
+  "amountMinor": 100,
+  "currency": "DEM",
+  "finality": "final",
+  "networkRound": 5050653,
+  "reconciliationRunId": "recon-test-0001"
+}
