@@ -58,7 +58,7 @@ function obligationFor(r, { contributionRef = 'contrib-session-0001@1', agreemen
   const expected = calculateObligation({
     agreement: r.agreement(aId, Number(aVer)).payload,
     contribution: r.contribution(cId, Number(cVer)).payload,
-    revenue: revenueRef ? r.revenues.get(revenueRef).payload : undefined,
+    revenue: revenueRef ? r.revenue(revenueRef).payload : undefined,
   });
   const payload = { obligationId, contributionRef, agreementRef, payee: 'producer', currency: 'DEM', ...expected };
   if (revenueRef) payload.revenueRef = revenueRef;
@@ -112,6 +112,10 @@ test('pilot criteria end to end: claim, approval, agreement, obligation, settlem
   // Duplicate payment: replaying the instruction, or calculating the obligation again, pays nothing more.
   await adapter.approve(instruction);
   await assert.rejects(adapter.submit(leg.settlementId), /RECONCILED/);
+  const duplicateInstruction = ev('settlement.instruction', instructionPayload, 'hour-operator', {
+    eventId: 'evt-settlement-instruction-duplicate', network: 'gcul',
+  });
+  await assert.rejects(adapter.approve(duplicateInstruction), /already assigned/);
   assert.throws(() => r.append(obligationFor(r, { obligationId: 'obl-0002' })), /already calculated/);
   assert.equal(ledger.balances[PRODUCER_ACCOUNT], 6000);
 });
@@ -147,6 +151,88 @@ test('amending after an obligation makes it stale, so it cannot be settled', asy
   assert.equal(r.isApproved(obligation.envelope.eventId), false);
   assert.equal(r.obligation(obligation.envelope.eventId).valid, false);
   assert.throws(() => buildSettlementInstruction(r, obligation.envelope.eventId, { network: 'gcul', payeeAccount: () => 'acct' }), /stale/);
+});
+
+test('an amendment after adapter approval cancels the leg before any payment', async () => {
+  const r = newRegistry();
+  const { claimEvent } = approvedClaimAndAgreement(r);
+  const obligation = obligationFor(r);
+  r.append(obligation);
+  const instructionPayload = buildSettlementInstruction(r, obligation.envelope.eventId, {
+    network: 'gcul', currency: 'DEM', payeeAccount: () => '1:USR:DEM:producer-account',
+  });
+  const instruction = ev('settlement.instruction', instructionPayload, 'hour-operator', {
+    eventId: 'evt-settlement-instruction-before-amendment', network: 'gcul',
+  });
+  const ledger = new FakeLedger({ operator: 'hour_chain_owner', balances: { hour_chain_owner: 1_000_000 } });
+  ledger.deploy('hour_settlement_v2');
+  const adapter = new GculSettlementAdapter({
+    store: new LegStore(), ledger, operator: 'hour_chain_owner', contractAlias: 'hour_settlement_v2', contractId: '1:CTR:test',
+    currency: 'DEM', resolveKey, isApproved: (ref) => r.isApproved(ref),
+  });
+  const [leg] = await adapter.approve(instruction);
+  r.append(ev('contribution.claimed', claim({ version: 2, amends: claimEvent.envelope.eventId, durationSeconds: 3600 }), 'producer'));
+
+  await assert.rejects(adapter.submit(leg.settlementId), /no longer approved/);
+  assert.equal(adapter.store.get(leg.settlementId).state, STATES.CANCELLED);
+  assert.equal(ledger.balances['1:USR:DEM:producer-account'] ?? 0, 0);
+  assert.equal(ledger.settleCalls, 0);
+});
+
+test('agreement amendments require a current party, and agreement IDs cannot collide across kinds', () => {
+  const r = newRegistry();
+  const { agreementEvent } = approvedClaimAndAgreement(r);
+  const unauthorized = ev('agreement.proposed', hourly({
+    version: 2, amends: agreementEvent.envelope.eventId, parties: ['mallory'], payee: 'mallory',
+  }), 'mallory');
+  assert.throws(() => r.append(unauthorized), /current party/);
+  assert.equal(r.agreement('agree-track-07-producer').version, 1);
+
+  assert.throws(() => r.append(ev('agreement.proposed', hourly({
+    agreementId: 'contrib-session-0001',
+  }), 'artist')), /collides/);
+  assert.throws(() => r.append(ev('contribution.claimed', claim({
+    contributionId: 'agree-track-07-producer',
+  }), 'producer')), /collides/);
+});
+
+test('obligations reject an agreement whose workRef differs from the selected contribution', () => {
+  const r = newRegistry();
+  const { claimEvent } = approvedClaimAndAgreement(r);
+  const changedWork = ev('contribution.claimed', claim({
+    version: 2, amends: claimEvent.envelope.eventId, workRef: 'work-another-track',
+  }), 'producer');
+  r.append(changedWork);
+  r.append(ev('contribution.reviewed', { contributionId: 'contrib-session-0001', version: 2, decision: 'approve' }, 'artist'));
+  r.append(ev('contribution.reviewed', { contributionId: 'contrib-session-0001', version: 2, decision: 'approve' }, 'engineer'));
+  assert.throws(() => r.append(obligationFor(r, { contributionRef: 'contrib-session-0001@2' })), /workRef/);
+});
+
+test('accepted events, query results, and log entries are detached from registry state', () => {
+  const r = newRegistry();
+  const event = ev('contribution.claimed', claim(), 'producer');
+  r.append(event);
+  event.payload.durationSeconds = 1;
+  event.payload.reviewers.push('mallory');
+  assert.equal(r.contribution('contrib-session-0001').payload.durationSeconds, 7200);
+  assert.deepEqual(r.contribution('contrib-session-0001').payload.reviewers, ['artist', 'engineer']);
+
+  const result = r.contribution('contrib-session-0001');
+  result.payload.durationSeconds = 2;
+  result.reviews.set('artist', { decision: 'approve' });
+  const log = r.log;
+  log[0].payload.durationSeconds = 3;
+  assert.equal(r.contribution('contrib-session-0001').payload.durationSeconds, 7200);
+  assert.equal(r.log[0].payload.durationSeconds, 7200);
+  assert.equal(ContributionRegistry.fromLog(r.log, { resolveKey, operators: ['hour-operator'] }).log.length, 1);
+
+  const paidRegistry = newRegistry();
+  approvedClaimAndAgreement(paidRegistry);
+  const obligation = obligationFor(paidRegistry);
+  paidRegistry.append(obligation);
+  const obligationView = paidRegistry.obligation(obligation.envelope.eventId);
+  obligationView.payload.amountMinor = 1;
+  assert.equal(paidRegistry.obligation(obligation.envelope.eventId).payload.amountMinor, 6000);
 });
 
 test('revenue share needs an operator revenue report and matches it exactly', () => {

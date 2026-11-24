@@ -32,6 +32,15 @@ export function payloadHash(payload) {
 export const identityOf = (signer) => String(signer ?? '').split('#')[0];
 
 export class ContributionRegistry {
+  #log = [];
+  #eventIds = new Set();
+  #contributions = new Map();
+  #agreements = new Map();
+  #revenues = new Map();
+  #obligations = new Map();
+  #obligationKeys = new Map();
+  #operators = new Set();
+
   /**
    * @param {object} options
    * @param {(signer: string) => object} options.resolveKey  public key for a signer ("identity#key")
@@ -41,14 +50,11 @@ export class ContributionRegistry {
     if (!resolveKey) throw new TypeError('resolveKey is required');
     if (!operators?.length) throw new TypeError('operators is required');
     this.resolveKey = resolveKey;
-    this.operators = new Set(operators);
-    this.log = [];
-    this.eventIds = new Set();
-    this.contributions = new Map(); // id -> { versions: [...] }
-    this.agreements = new Map();    // id -> { versions: [...] }
-    this.revenues = new Map();      // revenueId -> { eventId, payload }
-    this.obligations = new Map();   // eventId -> { payload, key }
-    this.obligationKeys = new Map(); // contributionRef|agreementRef|revenueRef -> eventId
+    this.#operators = new Set(operators);
+  }
+
+  get log() {
+    return structuredClone(this.#log);
   }
 
   static fromLog(events, options) {
@@ -58,10 +64,11 @@ export class ContributionRegistry {
   }
 
   append(event) {
-    const { envelope, payload } = event ?? {};
+    const accepted = structuredClone(event);
+    const { envelope, payload } = accepted ?? {};
     const type = envelope?.eventType;
     if (!EVENT_TYPES.includes(type)) throw new RegistryError(`unsupported eventType ${type}`);
-    if (this.eventIds.has(envelope.eventId)) throw new RegistryError(`duplicate eventId ${envelope.eventId}`);
+    if (this.#eventIds.has(envelope.eventId)) throw new RegistryError(`duplicate eventId ${envelope.eventId}`);
     if (envelope.network && envelope.network !== 'offchain') throw new RegistryError('contribution records are offchain events');
     if (!validators[type](payload)) throw new RegistryError(`invalid ${type}: ${ajv.errorsText(validators[type].errors)}`);
     if (envelope.payloadHash !== payloadHash(payload)) throw new RegistryError('payloadHash does not match payload');
@@ -82,29 +89,36 @@ export class ContributionRegistry {
       'obligation.calculated': this.#obligate,
     }[type];
     handler.call(this, envelope, payload, actor); // throws before mutating on any rule violation
-    this.eventIds.add(envelope.eventId);
-    this.log.push(event);
+    this.#eventIds.add(envelope.eventId);
+    this.#log.push(accepted);
     return { eventId: envelope.eventId, type };
   }
 
   // --- queries ---
 
   contribution(id, version) {
-    const record = this.contributions.get(id);
+    const record = this.#contributions.get(id);
     if (!record) return null;
-    return version ? record.versions[version - 1] ?? null : record.versions.at(-1);
+    const result = version ? record.versions[version - 1] ?? null : record.versions.at(-1);
+    return result ? structuredClone(result) : null;
   }
 
   agreement(id, version) {
-    const record = this.agreements.get(id);
+    const record = this.#agreements.get(id);
     if (!record) return null;
-    return version ? record.versions[version - 1] ?? null : record.versions.at(-1);
+    const result = version ? record.versions[version - 1] ?? null : record.versions.at(-1);
+    return result ? structuredClone(result) : null;
+  }
+
+  revenue(id) {
+    const result = this.#revenues.get(id);
+    return result ? structuredClone(result) : null;
   }
 
   obligation(eventId) {
-    const record = this.obligations.get(eventId);
+    const record = this.#obligations.get(eventId);
     if (!record) return null;
-    return { ...record, valid: this.#obligationValid(record.payload) };
+    return { ...structuredClone(record), valid: this.#obligationValid(record.payload) };
   }
 
   // Plugs into GculSettlementAdapter({ isApproved }). True for:
@@ -114,12 +128,12 @@ export class ContributionRegistry {
   isApproved(ref) {
     const at = /^(.+)@([1-9][0-9]*)$/.exec(ref);
     if (at) {
-      const version = this.contribution(at[1], Number(at[2])) ?? this.agreement(at[1], Number(at[2]));
+      const version = this.#contribution(at[1], Number(at[2])) ?? this.#agreement(at[1], Number(at[2]));
       return version?.status === STATUS.APPROVED;
     }
-    const obligation = this.obligations.get(ref);
+    const obligation = this.#obligations.get(ref);
     if (obligation) return this.#obligationValid(obligation.payload);
-    for (const records of [this.contributions, this.agreements]) {
+    for (const records of [this.#contributions, this.#agreements]) {
       for (const record of records.values()) {
         for (const v of record.versions) {
           for (const review of v.reviews.values()) {
@@ -132,8 +146,18 @@ export class ContributionRegistry {
   }
 
   approvalEventIds(id, version, kind) {
-    const v = kind === 'agreement' ? this.agreement(id, version) : this.contribution(id, version);
+    const v = kind === 'agreement' ? this.#agreement(id, version) : this.#contribution(id, version);
     return [...(v?.reviews.values() ?? [])].filter((r) => r.decision === 'approve').map((r) => r.eventId);
+  }
+
+  #contribution(id, version) {
+    const record = this.#contributions.get(id);
+    return record ? version ? record.versions[version - 1] ?? null : record.versions.at(-1) : null;
+  }
+
+  #agreement(id, version) {
+    const record = this.#agreements.get(id);
+    return record ? version ? record.versions[version - 1] ?? null : record.versions.at(-1) : null;
   }
 
   // --- handlers ---
@@ -146,17 +170,18 @@ export class ContributionRegistry {
       if (!(window > 0)) throw new RegistryError('endAt must be after startAt');
       if (p.durationSeconds > window) throw new RegistryError('durationSeconds exceeds the start/end window');
     }
-    const record = this.contributions.get(p.contributionId);
+    if (this.#agreements.has(p.contributionId)) throw new RegistryError('contributionId collides with an agreementId');
+    const record = this.#contributions.get(p.contributionId);
     this.#checkVersioning(record, p, envelope, 'contribution');
     if (record && record.versions.at(-1).payload.contributor !== p.contributor) {
       throw new RegistryError('only the original contributor can amend a claim');
     }
     this.#checkOverlapAndDuplicates(p);
-    this.#addVersion(this.contributions, p.contributionId, envelope, p);
+    this.#addVersion(this.#contributions, p.contributionId, envelope, p);
   }
 
   #reviewContribution(envelope, p, actor) {
-    const v = this.contribution(p.contributionId, p.version);
+    const v = this.#contribution(p.contributionId, p.version);
     if (!v) throw new RegistryError(`unknown contribution ${p.contributionId}@${p.version}`);
     if (!v.payload.reviewers.includes(actor)) throw new RegistryError(`${actor} is not a reviewer of this claim`);
     this.#review(v, envelope, p, actor, v.payload.reviewers);
@@ -165,41 +190,48 @@ export class ContributionRegistry {
   #propose(envelope, p, actor) {
     if (!p.parties.includes(actor)) throw new RegistryError('an agreement must be proposed by one of its parties');
     if (!p.parties.includes(p.payee)) throw new RegistryError('the payee must be a party to the agreement');
-    const contribution = this.contribution(p.contributionId);
+    if (this.#contributions.has(p.agreementId)) throw new RegistryError('agreementId collides with a contributionId');
+    const contribution = this.#contribution(p.contributionId);
     if (!contribution) throw new RegistryError(`unknown contribution ${p.contributionId}`);
     if (contribution.payload.workRef !== p.workRef) throw new RegistryError('agreement workRef does not match the contribution');
-    this.#checkVersioning(this.agreements.get(p.agreementId), p, envelope, 'agreement');
-    this.#addVersion(this.agreements, p.agreementId, envelope, p);
+    const record = this.#agreements.get(p.agreementId);
+    const current = record?.versions.at(-1);
+    if (current && !current.payload.parties.includes(actor)) {
+      throw new RegistryError('an agreement amendment must be proposed by a current party');
+    }
+    this.#checkVersioning(record, p, envelope, 'agreement');
+    this.#addVersion(this.#agreements, p.agreementId, envelope, p);
   }
 
   #reviewAgreement(envelope, p, actor) {
-    const v = this.agreement(p.agreementId, p.version);
+    const v = this.#agreement(p.agreementId, p.version);
     if (!v) throw new RegistryError(`unknown agreement ${p.agreementId}@${p.version}`);
     if (!v.payload.parties.includes(actor)) throw new RegistryError(`${actor} is not a party to this agreement`);
     this.#review(v, envelope, p, actor, v.payload.parties);
   }
 
   #reportRevenue(envelope, p, actor) {
-    if (!this.operators.has(actor)) throw new RegistryError('revenue must be reported by an operator');
-    if (this.revenues.has(p.revenueId)) throw new RegistryError(`duplicate revenueId ${p.revenueId}`);
+    if (!this.#operators.has(actor)) throw new RegistryError('revenue must be reported by an operator');
+    if (this.#revenues.has(p.revenueId)) throw new RegistryError(`duplicate revenueId ${p.revenueId}`);
     if (!(Date.parse(p.periodEnd) > Date.parse(p.periodStart))) throw new RegistryError('periodEnd must be after periodStart');
-    this.revenues.set(p.revenueId, { eventId: envelope.eventId, payload: p });
+    this.#revenues.set(p.revenueId, { eventId: envelope.eventId, payload: p });
   }
 
   #obligate(envelope, p, actor) {
-    if (!this.operators.has(actor)) throw new RegistryError('obligations must be calculated by an operator');
+    if (!this.#operators.has(actor)) throw new RegistryError('obligations must be calculated by an operator');
     const [cId, cVer] = splitRef(p.contributionRef);
     const [aId, aVer] = splitRef(p.agreementRef);
-    const contribution = this.contribution(cId, cVer);
-    const agreement = this.agreement(aId, aVer);
+    const contribution = this.#contribution(cId, cVer);
+    const agreement = this.#agreement(aId, aVer);
     if (contribution?.status !== STATUS.APPROVED) throw new RegistryError(`${p.contributionRef} is not an approved current version`);
     if (agreement?.status !== STATUS.APPROVED) throw new RegistryError(`${p.agreementRef} is not an approved current version`);
     if (agreement.payload.contributionId !== cId) throw new RegistryError('agreement does not cover this contribution');
+    if (contribution.payload.workRef !== agreement.payload.workRef) throw new RegistryError('agreement workRef does not match the selected contribution');
     if (p.payee !== agreement.payload.payee) throw new RegistryError('payee does not match the agreement');
     if (p.currency !== agreement.payload.currency) throw new RegistryError('currency does not match the agreement');
     let revenue;
     if (agreement.payload.basis === 'revenue_share') {
-      revenue = p.revenueRef && this.revenues.get(p.revenueRef)?.payload;
+      revenue = p.revenueRef && this.#revenues.get(p.revenueRef)?.payload;
       if (!revenue) throw new RegistryError('revenue_share obligation needs a reported revenueRef');
       if (revenue.workRef !== agreement.payload.workRef || revenue.currency !== p.currency) {
         throw new RegistryError('revenue report does not match the agreement work or currency');
@@ -212,12 +244,12 @@ export class ContributionRegistry {
       throw new RegistryError(`amount does not match the agreement: expected ${expected.amountMinor} (${expected.calculation.formula})`);
     }
     const key = `${p.contributionRef}|${p.agreementRef}|${p.revenueRef ?? ''}`;
-    if (this.obligationKeys.has(key)) throw new RegistryError(`obligation already calculated for ${key}`);
-    for (const o of this.obligations.values()) {
+    if (this.#obligationKeys.has(key)) throw new RegistryError(`obligation already calculated for ${key}`);
+    for (const o of this.#obligations.values()) {
       if (o.payload.obligationId === p.obligationId) throw new RegistryError(`duplicate obligationId ${p.obligationId}`);
     }
-    this.obligations.set(envelope.eventId, { eventId: envelope.eventId, payload: p, key });
-    this.obligationKeys.set(key, envelope.eventId);
+    this.#obligations.set(envelope.eventId, { eventId: envelope.eventId, payload: p, key });
+    this.#obligationKeys.set(key, envelope.eventId);
   }
 
   // --- helpers ---
@@ -233,7 +265,7 @@ export class ContributionRegistry {
   }
 
   #checkOverlapAndDuplicates(p) {
-    for (const [id, record] of this.contributions) {
+    for (const [id, record] of this.#contributions) {
       if (id === p.contributionId) continue; // an amendment replaces its own previous version
       const other = record.versions.at(-1);
       if (other.status === STATUS.SUPERSEDED || other.payload.contributor !== p.contributor) continue;
@@ -269,7 +301,7 @@ export class ContributionRegistry {
   #obligationValid(p) {
     const [cId, cVer] = splitRef(p.contributionRef);
     const [aId, aVer] = splitRef(p.agreementRef);
-    return this.contribution(cId, cVer)?.status === STATUS.APPROVED && this.agreement(aId, aVer)?.status === STATUS.APPROVED;
+    return this.#contribution(cId, cVer)?.status === STATUS.APPROVED && this.#agreement(aId, aVer)?.status === STATUS.APPROVED;
   }
 }
 
