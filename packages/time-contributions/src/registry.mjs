@@ -145,6 +145,41 @@ export class ContributionRegistry {
     return false;
   }
 
+  // AI disclosure for a work: one entry per contribution (its current version).
+  // aiAssistance is null when the contributor did not declare, [] when they
+  // declared no AI use. Only APPROVED versions are reviewer-confirmed.
+  aiDisclosure(workRef) {
+    const contributions = [];
+    for (const [id, record] of this.#contributions) {
+      const current = record.versions.at(-1);
+      if (current.payload.workRef !== workRef) continue;
+      contributions.push(structuredClone({
+        contributionId: id,
+        version: current.version,
+        status: current.status,
+        contributor: current.payload.contributor,
+        role: current.payload.role,
+        activity: current.payload.activity,
+        aiAssistance: current.payload.aiAssistance ?? null,
+      }));
+    }
+    const declared = contributions.filter((c) => c.aiAssistance !== null);
+    return {
+      workRef,
+      contributions,
+      summary: {
+        // 'yes' if anyone declares AI use; 'no' only if every contribution explicitly
+        // declares none; otherwise 'unknown'. Silence is never reported as 'no'.
+        aiUsed: declared.some((c) => c.aiAssistance.length > 0) ? 'yes'
+          : declared.length === contributions.length ? 'no' : 'unknown',
+        tools: [...new Set(declared.flatMap((c) => c.aiAssistance.map((a) => a.tool)))].sort(),
+        outputs: [...new Set(declared.flatMap((c) => c.aiAssistance.flatMap((a) => a.outputs)))].sort(),
+        undeclared: contributions.filter((c) => c.aiAssistance === null).map((c) => c.contributionId),
+        unapproved: contributions.filter((c) => c.status !== STATUS.APPROVED).map((c) => c.contributionId),
+      },
+    };
+  }
+
   approvalEventIds(id, version, kind) {
     const v = kind === 'agreement' ? this.#agreement(id, version) : this.#contribution(id, version);
     return [...(v?.reviews.values() ?? [])].filter((r) => r.decision === 'approve').map((r) => r.eventId);

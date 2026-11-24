@@ -104,6 +104,14 @@
           "items": {
             "$ref": "#/$defs/identity"
           }
+        },
+        "aiAssistance": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/aiAssistanceEntry"
+          },
+          "description": "AI disclosure for this contribution, approved by reviewers with the rest of the claim. Absent means not declared; an empty array declares that no AI was used. AI tools are disclosed here, never listed as contributors: they cannot sign, approve, hold rights or be paid."
         }
       },
       "dependentRequired": {
@@ -463,6 +471,71 @@
             }
           },
           "description": "Integer arithmetic only; amounts round down and the dropped fraction is recorded as remainderNumerator / remainderDenominator minor units."
+        }
+      }
+    },
+    "aiAssistanceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool",
+        "use",
+        "outputs"
+      ],
+      "properties": {
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "\\S",
+          "description": "Product used, e.g. \"Google Flow\"."
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Who provides it, e.g. \"Google\"."
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Underlying model when known, e.g. \"Lyria\"."
+        },
+        "use": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "\\S",
+          "description": "What the AI did and what the contributor did, in plain words."
+        },
+        "outputs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "audio",
+              "vocals",
+              "lyrics",
+              "composition",
+              "video",
+              "image",
+              "text",
+              "other"
+            ]
+          },
+          "description": "Kinds of material the AI produced that are in the work."
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "References to prompts, project links or exports; access-controlled material stays off-ledger."
         }
       }
     }
