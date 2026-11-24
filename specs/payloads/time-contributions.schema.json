@@ -138,7 +138,30 @@
           "type": "string",
           "maxLength": 1000
         }
-      }
+      },
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "dispute"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "description": "A dispute must state a non-empty reason so the blocking decision stays actionable and auditable."
     },
     "agreement.proposed": {
       "type": "object",
@@ -151,7 +174,8 @@
         "payee",
         "parties",
         "currency",
-        "basis"
+        "basis",
+        "termsRef"
       ],
       "properties": {
         "agreementId": {
@@ -306,7 +330,30 @@
           "type": "string",
           "maxLength": 1000
         }
-      }
+      },
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "dispute"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "description": "A dispute must state a non-empty reason so the blocking decision stays actionable and auditable."
     },
     "revenue.reported": {
       "type": "object",

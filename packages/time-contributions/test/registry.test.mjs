@@ -259,7 +259,11 @@ test('rules that reject events leave the registry unchanged', () => {
   reject(ev('contribution.claimed', claim({ contributionId: 'c-overlap', startAt: '2026-11-20T19:00:00Z', endAt: '2026-11-20T21:00:00Z', durationSeconds: 3600 }), 'producer'), /overlaps/, 'overlap');
   reject(ev('contribution.claimed', claim({ contributionId: 'c-long', startAt: '2026-11-21T10:00:00Z', endAt: '2026-11-21T11:00:00Z', durationSeconds: 7200 }), 'producer'), /exceeds/, 'duration > window');
   reject(ev('contribution.reviewed', { contributionId: 'contrib-session-0001', version: 1, decision: 'approve' }, 'mallory'), /not a reviewer/, 'non-reviewer');
-  reject(ev('contribution.reviewed', { contributionId: 'contrib-session-0001', version: 1, decision: 'dispute' }, 'artist'), /immutable/, 're-review');
+  reject(ev('contribution.reviewed', { contributionId: 'contrib-session-0001', version: 1, decision: 'dispute', reason: 'changed my mind' }, 'artist'), /immutable/, 're-review');
+  reject(ev('contribution.reviewed', { contributionId: 'contrib-session-0001', version: 1, decision: 'dispute' }, 'engineer'), /invalid contribution.reviewed/, 'dispute without reason');
+  reject(ev('contribution.reviewed', { contributionId: 'contrib-session-0001', version: 1, decision: 'dispute', reason: '  ' }, 'engineer'), /invalid contribution.reviewed/, 'blank dispute reason');
+  reject(ev('agreement.proposed', (({ termsRef, ...rest }) => ({ ...rest, agreementId: 'a-4' }))(hourly()), 'artist'), /invalid agreement.proposed/, 'no termsRef');
+  reject(ev('contribution.claimed', claim({ contributionId: 'c-untimed-dup', startAt: undefined, endAt: undefined, timezone: undefined }), 'producer'), /probable duplicate/, 'untimed duplicate of a timed claim');
   reject(ev('agreement.proposed', hourly({ agreementId: 'a-2', payee: 'mallory' }), 'artist'), /payee must be a party/, 'payee not party');
   reject(ev('agreement.proposed', hourly({ agreementId: 'a-3', feeMinor: 100 }), 'artist'), /invalid agreement.proposed/, 'two bases');
   reject({ ...obligationFor(r), payload: { ...obligationFor(r).payload, amountMinor: 6001 } }, /payloadHash/, 'tampered payload');

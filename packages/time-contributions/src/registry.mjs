@@ -273,7 +273,9 @@ export class ContributionRegistry {
       if (p.startAt && o.startAt && Date.parse(p.startAt) < Date.parse(o.endAt) && Date.parse(o.startAt) < Date.parse(p.endAt)) {
         throw new RegistryError(`overlaps ${id}@${other.version} for the same contributor`);
       }
-      if (!p.startAt && !o.startAt && o.workRef === p.workRef && o.role === p.role && o.activity === p.activity &&
+      // Two timed claims are told apart by their windows (the overlap check above).
+      // If either side is untimed, identical terms are treated as the same session.
+      if ((!p.startAt || !o.startAt) && o.workRef === p.workRef && o.role === p.role && o.activity === p.activity &&
           o.durationSeconds === p.durationSeconds) {
         throw new RegistryError(`probable duplicate of ${id}@${other.version}; add startAt/endAt to distinguish sessions`);
       }
