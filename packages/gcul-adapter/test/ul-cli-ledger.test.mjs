@@ -95,6 +95,25 @@ test('read queries are signed by the operator, and querySender is required', asy
   assert.throws(() => new UlCliLedger({}), /querySender/);
 });
 
+test('payee alias must describe exactly the approved account', async () => {
+  let output = 'Account: 1:USR:DEM:payee\n';
+  let code = 0;
+  let seen;
+  const ledger = new UlCliLedger({ querySender: 'op', payeeAliases: { '1:USR:DEM:payee': 'user2' },
+    run: async (_bin, args) => { seen = args; return { code, output }; } });
+  await ledger.verifyPayee('1:USR:DEM:payee');
+  assert.match(seen.join(' '), /accounts describe --alias user2 --sender op/);
+  output = 'Account: 1:USR:DEM:someone-else\n';
+  await assert.rejects(ledger.verifyPayee('1:USR:DEM:payee'), /does not resolve/);
+  output = 'Account: 1:USR:DEM:payee\nAccount: 1:USR:DEM:someone-else\n';
+  await assert.rejects(ledger.verifyPayee('1:USR:DEM:payee'), /does not resolve/);
+  output = 'unrecognised output';
+  await assert.rejects(ledger.verifyPayee('1:USR:DEM:payee'), /does not resolve/);
+  code = 1;
+  await assert.rejects(ledger.verifyPayee('1:USR:DEM:payee'), /describe payee .* failed/);
+  await assert.rejects(ledger.verifyPayee('missing'), /invalid local/);
+});
+
 test('refuses unknown payees and unsafe argument values before calling ul-cli', async () => {
   let called = false;
   const ledger = new UlCliLedger({ querySender: 'op', payeeAliases: { p: 'alias' }, run: async () => { called = true; return { code: 0, output: SUCCESS }; } });
@@ -102,5 +121,8 @@ test('refuses unknown payees and unsafe argument values before calling ul-cli', 
     contributionRef: 'c@1', agreementRef: 'a@1', amountMinor: 1 };
   await assert.rejects(ledger.settle({ ...base, payee: 'unknown' }), LedgerRejectedError);
   await assert.rejects(ledger.settle({ ...base, payee: 'p', contributionRef: 'x"; drop' }), /unsafe/);
+  ledger.payeeAliases.p = 'alias);malicious(';
+  await assert.rejects(ledger.verifyPayee('p'), /invalid local/);
+  await assert.rejects(ledger.settle({ ...base, payee: 'p' }), /unsafe/);
   assert.equal(called, false);
 });

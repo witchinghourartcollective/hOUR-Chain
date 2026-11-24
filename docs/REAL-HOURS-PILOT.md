@@ -151,6 +151,8 @@ Expected output: the leg `CONFIRMED` with a transaction hash, the operator's bal
 
 Evidence for each run is written to `~/.local/state/hour-gcul/settlements/`.
 
+The runner checks that each local payee alias resolves to its approved account and accepts only DEM instructions. A live run exits nonzero if a requested leg is not reconciled; inspect its evidence before acting. Rerunning resolves `UNKNOWN` legs from the ledger without sending a payment. To retry a `FAILED` leg after correcting its cause, add `--retry-failed`; the original settlement ID is reused. For a `SUBMITTING` leg, first confirm the previous worker has stopped (an expired lease alone is not proof), then add `--recover-submitting` to resolve it from the ledger. An unexpired lease still blocks recovery. Add `--retry-failed` separately if a resolved leg needs a retry.
+
 ## 9. Record and report
 
 - Add the evidence to `docs/evidence/` and a summary to `docs/GCUL-INTEGRATION-TESTING.md`. Label it **real records, solo, integration-testing (no-value currency)**.

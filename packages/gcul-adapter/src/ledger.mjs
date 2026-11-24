@@ -99,6 +99,7 @@ export class UlCliLedger {
   async settle(call) {
     const payeeAlias = this.payeeAliases[call.payee];
     if (!payeeAlias) throw new LedgerRejectedError(`no local ul-cli alias for payee ${call.payee}`);
+    if (!/^[A-Za-z0-9_-]+$/.test(payeeAlias)) throw new LedgerRejectedError(`unsafe payee alias: ${payeeAlias}`);
     const args = ['--timeout', this.timeout, 'contracts', 'invoke', '--alias', call.contractAlias,
       '--method-name', 'settle', '--sender', call.sender, '--payment', String(call.paymentMinor),
       '--arg', `settlement_id=${pyStr(call.settlementId)}`,
@@ -109,6 +110,18 @@ export class UlCliLedger {
       '--arg', `amount_minor=${call.amountMinor}`];
     const { code, output } = await this.run(this.bin, args);
     return parseSettleResult(code, output);
+  }
+
+  async verifyPayee(payee) {
+    const alias = this.payeeAliases[payee];
+    if (!alias || !/^[A-Za-z0-9_-]+$/.test(alias)) throw new LedgerRejectedError(`invalid local ul-cli alias for payee ${payee}`);
+    const { code, output } = await this.run(this.bin,
+      ['--timeout', this.timeout, 'accounts', 'describe', '--alias', alias, '--sender', this.querySender]);
+    if (code !== 0) throw new LedgerRejectedError(`describe payee ${alias} failed: ${lastLine(output)}`);
+    const accounts = [...output.matchAll(/^\s*Account:\s*(\S+)\s*$/gm)];
+    if (accounts.length !== 1 || accounts[0][1] !== payee) {
+      throw new LedgerRejectedError(`payee alias ${alias} does not resolve to ${payee}`);
+    }
   }
 
   async getReceipt(alias, settlementId) {

@@ -9,6 +9,8 @@
 //   --payees FILE        JSON mapping payee identities to GCUL accounts and local ul-cli aliases:
 //                        { "fletcher": { "account": "1:USR:DEM:...", "alias": "hour_chain_user2" } }
 //   --live               actually submit; without it nothing is sent
+//   --retry-failed       explicitly retry FAILED legs with their original settlement IDs
+//   --recover-submitting recover abandoned SUBMITTING legs after confirming their workers stopped
 //   --state-dir DIR      leg table and evidence (default ~/.local/state/hour-gcul)
 //   --ledger fake --fake-ledger-state FILE   offline testing only
 //
@@ -41,6 +43,7 @@ try {
   args = parseArgs({ options: {
     instruction: { type: 'string' }, 'operator-home': { type: 'string' }, payees: { type: 'string' }, live: { type: 'boolean' },
     'state-dir': { type: 'string' }, ledger: { type: 'string' }, 'fake-ledger-state': { type: 'string' },
+    'retry-failed': { type: 'boolean' }, 'recover-submitting': { type: 'boolean' },
   } }).values;
 } catch (e) { fail(e.message); }
 for (const k of ['instruction', 'operator-home', 'payees']) if (!args[k]) fail(`--${k} is required`);
@@ -65,7 +68,7 @@ const registry = new DurableRegistry(profile.store, {
 const adapter = new GculSettlementAdapter({
   store: new LegStore(join(stateDir, fake ? 'settlement-legs-fake.db' : 'settlement-legs.db')),
   ledger, operator: OPERATOR_ALIAS, contractAlias: CONTRACT_ALIAS, contractId: CONTRACT_ID,
-  currency: instruction.payload?.currency,
+  currency: 'DEM',
   resolveKey: profile.resolveOperatorKey,
   isApproved: (ref) => registry.isApproved(ref),
   instructionSigners: profile.operators,
@@ -80,14 +83,30 @@ const step = (name, data) => { evidence.steps.push({ name, ...data }); console.l
 try {
   step('balance before', { operator: await operatorBalance() });
   const plan = await adapter.simulate(instruction); // full verification, read-only
+  if (!fake) for (const { payee } of plan.legs) await ledger.verifyPayee(payee);
   step('verified plan', { legs: plan.legs.map(({ settlementId, payee, amountMinor, alreadyOnLedger }) => ({ settlementId, payee, amountMinor, alreadyOnLedger })) });
   if (!args.live) {
     console.log('\nDry run only: nothing was submitted. Re-run with --live to pay.');
   } else {
     await adapter.approve(instruction);
     for (const { settlementId } of plan.legs) {
-      const leg = adapter.store.get(settlementId);
+      let leg = adapter.store.get(settlementId);
+      if (leg.state === 'UNKNOWN' || (leg.state === 'SUBMITTING' && args['recover-submitting']) ||
+          (leg.state === 'FAILED' && args['retry-failed'])) {
+        adapter.store.acquireLease(settlementId, adapter.workerId, adapter.leaseMs);
+        try {
+          leg = adapter.store.get(settlementId);
+          if (leg.state === 'SUBMITTING' && args['recover-submitting']) {
+            leg = adapter.store.transition(settlementId, 'UNKNOWN', { lastError: 'abandoned submission; operator confirmed worker stopped' });
+          }
+          if (leg.state === 'UNKNOWN') leg = await adapter.resolveUnknown(settlementId);
+          if (leg.state === 'FAILED' && args['retry-failed']) leg = adapter.retry(settlementId);
+        } finally {
+          adapter.store.releaseLease(settlementId, adapter.workerId);
+        }
+      }
       if (leg.state !== 'APPROVED') { step(`leg ${leg.legIndex}`, { state: leg.state, note: 'not submitted' }); continue; }
+      if (!fake) await ledger.verifyPayee(leg.payee);
       const r = await adapter.submit(settlementId);
       step(`leg ${r.legIndex}`, { state: r.state, txRef: r.txRef, round: r.networkRound, lastError: r.lastError });
     }
@@ -95,6 +114,11 @@ try {
     step('balance after', { operator: after });
     const report = await adapter.reconcile({ instructions: [instruction], runId: `recon-${Date.now()}`, knownPreAdapter: KNOWN_PRE_RUNNER });
     step('reconcile', report);
+    const requested = new Set(plan.legs.map(({ settlementId }) => settlementId));
+    if (plan.legs.some(({ settlementId }) => adapter.store.get(settlementId)?.state !== 'RECONCILED') ||
+        report.findings.some(({ settlementId, kind }) => requested.has(settlementId) && kind !== 'known-pre-adapter')) {
+      process.exitCode = 1;
+    }
   }
 } catch (error) {
   step('error', { message: error.message });
