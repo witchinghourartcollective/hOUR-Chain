@@ -24,14 +24,16 @@ const TRUSTED = join(HOME, 'trusted-keys.json');
 const HELP = `hour-time — real-hours contribution workflow (docs/TIME-CONTRIBUTIONS.md)
 
 Profile ($HOUR_HOME, default ~/.hour)
-  keygen --identity ID                   create your ML-DSA-65 key; prints your public key to share
-  trust --identity ID --public-key KEY   trust a collaborator's public key
-  config --store PATH --operators A,B    set the shared store and operator identities
+  keygen --identity ID                   create your ML-DSA-65 key (key id k1); prints your public key to share
+  keygen --rotate                        new key with the next key id; the old public key stays trusted for history
+  trust --identity ID --public-key KEY [--key-id k1]   trust a collaborator's key; key ids are never overwritten
+  config --store PATH --operators A,B [--anchor SEQ:HASH]   store, operators, and an independently recorded anchor
   whoami                                 show identity, public key, store
 
 Records (signed with your key; --out FILE signs without appending)
   claim --contribution-id ID --work ID --role R --activity A --duration 2h30m
-        [--start ISO --end ISO --timezone TZ] [--evidence ref,ref] --reviewers ID,ID [--amends]
+        [--start ISO --end ISO --timezone TZ] [--evidence ref,ref] --reviewers ID,ID
+        [--amends [--amends-event EVENT_ID --amends-version N]]   (explicit target works offline with --out)
   review --contribution-id ID --version N (--approve | --dispute --reason TEXT)
   propose-agreement --agreement-id ID --work ID --contribution-id ID --payee ID --parties ID,ID
         --currency CUR --terms-ref REF (--fee N | --rate-per-hour N | --share-bps N) [--amends]
@@ -41,9 +43,10 @@ Records (signed with your key; --out FILE signs without appending)
   append FILE                            verify and append a signed event someone sent you
 
 Settlement and audit
-  instruction --obligation EVENT_ID --payee-account ACCOUNT [--network gcul] [--currency CUR] --out FILE
+  instruction --obligation EVENT_ID --payee-account ACCOUNT [--network gcul] [--currency CUR] --out FILE   (operators only)
   status [--contribution-id ID | --agreement-id ID]
-  head                                   current {seq, hash}; record it somewhere independent to anchor history
+  head [--record]                        current {seq, hash}; --record saves it as this profile's anchor
+                                         (also keep a copy somewhere the store's host cannot rewrite)
 `;
 
 const fail = (message) => { console.error(`hour-time: ${message}`); process.exit(1); };
@@ -62,11 +65,25 @@ function profile() {
   return p;
 }
 
+// Signers are "identity#keyId". Keys are never replaced: a rotated key gets a
+// new key id, and old public keys stay trusted so history keeps verifying.
 function trustedKeys() {
   const p = profile();
-  const keys = { ...readJson(TRUSTED, {}) };
-  keys[p.identity] = readJson(KEY, null)?.publicKey; // always trust yourself
+  const keys = {};
+  for (const [id, entry] of Object.entries(readJson(TRUSTED, {}))) {
+    keys[id] = typeof entry === 'string' ? { k1: entry } : { ...entry }; // older profiles stored one key per identity
+  }
+  const own = readJson(KEY, null);
+  keys[p.identity] = { ...(p.retiredKeys ?? {}), ...(own ? { [own.keyId ?? 'k1']: own.publicKey } : {}) };
   return keys;
+}
+
+function resolverFor(keys) {
+  return (signer) => {
+    const [id, keyId = 'k1'] = String(signer).split('#');
+    const k = keys[id]?.[keyId];
+    return k ? importPublicKey(k) : null;
+  };
 }
 
 function openStore(extra = {}) {
@@ -75,8 +92,9 @@ function openStore(extra = {}) {
   const keys = trustedKeys();
   mkdirSync(dirname(p.store), { recursive: true });
   return new DurableRegistry(p.store, {
-    resolveKey: (signer) => { const k = keys[String(signer).split('#')[0]]; return k ? importPublicKey(k) : null; },
+    resolveKey: resolverFor(keys),
     operators: p.operators ?? [],
+    ...(p.anchor ? { expectedHead: p.anchor } : {}),
     ...extra,
   });
 }
@@ -99,7 +117,7 @@ function sign(eventType, payload, subject, { network } = {}) {
     issuedAt: new Date().toISOString(), payloadHash: payloadHash(payload),
   };
   if (network) envelope.network = network;
-  return { envelope: signEnvelope(envelope, importPrivateKey(key.privateKey), { signer: `${p.identity}#k1` }), payload };
+  return { envelope: signEnvelope(envelope, importPrivateKey(key.privateKey), { signer: `${p.identity}#${key.keyId ?? 'k1'}` }), payload };
 }
 
 function deliver(event, out) {
@@ -123,10 +141,21 @@ function decision(v) {
   return v.approve ? { decision: 'approve' } : { decision: 'dispute', reason: v.reason ?? '' };
 }
 
-function currentEventId(store, kind, id) {
-  const record = kind === 'agreement' ? store.agreement(id) : store.contribution(id);
-  if (!record) fail(`no ${kind} ${id} to amend`);
-  return record;
+// The version being amended: given explicitly (works offline, with --out), or
+// looked up in the store.
+function amendTarget(v, kind, id) {
+  if (v['amends-event'] || v['amends-version']) {
+    need(v, 'amends-event', 'amends-version');
+    return { eventId: v['amends-event'], version: int(v, 'amends-version') };
+  }
+  const store = openStore();
+  try {
+    const record = kind === 'agreement' ? store.agreement(id) : store.contribution(id);
+    if (!record) fail(`no ${kind} ${id} to amend`);
+    return record;
+  } finally {
+    store.close();
+  }
 }
 
 const OPTIONS = {
@@ -141,6 +170,8 @@ const OPTIONS = {
   'statement-ref': { type: 'string' }, 'obligation-id': { type: 'string' }, 'contribution-ref': { type: 'string' },
   'agreement-ref': { type: 'string' }, 'revenue-ref': { type: 'string' }, obligation: { type: 'string' },
   'payee-account': { type: 'string' }, network: { type: 'string' }, out: { type: 'string' },
+  rotate: { type: 'boolean' }, 'key-id': { type: 'string' }, anchor: { type: 'string' }, record: { type: 'boolean' },
+  'amends-event': { type: 'string' }, 'amends-version': { type: 'string' },
 };
 
 const need = (v, ...names) => { for (const n of names) if (v[n] === undefined || v[n] === '') fail(`--${n} is required`); };
@@ -150,31 +181,58 @@ const COMMANDS = {
   help() { console.log(HELP); },
 
   keygen(v) {
-    need(v, 'identity');
-    if (existsSync(KEY)) fail(`${KEY} already exists; refusing to overwrite a signing key`);
+    const existing = readJson(KEY, null);
+    let keyId = 'k1';
+    let p = readJson(PROFILE, {});
+    if (v.rotate) {
+      if (!existing) fail('nothing to rotate; run keygen --identity ID first');
+      const oldId = existing.keyId ?? 'k1';
+      keyId = `k${Number(oldId.slice(1)) + 1}`;
+      p = { ...p, retiredKeys: { ...(p.retiredKeys ?? {}), [oldId]: existing.publicKey } }; // history keeps verifying
+    } else {
+      need(v, 'identity');
+      if (existing) fail(`${KEY} already exists; refusing to overwrite a signing key (use --rotate)`);
+      p = { ...p, identity: v.identity };
+    }
     const pair = generateTestKeyPair();
-    writePrivate(KEY, { algorithm: 'ML-DSA-65', publicKey: exportPublicKey(pair.publicKey), privateKey: exportPrivateKey(pair.privateKey) });
-    writePrivate(PROFILE, { ...readJson(PROFILE, {}), identity: v.identity });
-    console.log(`identity: ${v.identity}\npublic key (share this):\n${exportPublicKey(pair.publicKey)}`);
+    writePrivate(PROFILE, p);
+    writePrivate(KEY, { algorithm: 'ML-DSA-65', keyId, publicKey: exportPublicKey(pair.publicKey), privateKey: exportPrivateKey(pair.privateKey) });
+    console.log(`identity: ${p.identity}\nkey id: ${keyId}\npublic key (share this with its key id):\n${exportPublicKey(pair.publicKey)}`);
   },
 
   trust(v) {
     need(v, 'identity', 'public-key');
     try { importPublicKey(v['public-key']); } catch { fail('not a valid public key'); }
-    writePrivate(TRUSTED, { ...readJson(TRUSTED, {}), [v.identity]: v['public-key'] });
-    console.log(`trusting ${v.identity}`);
+    const keyId = v['key-id'] ?? 'k1';
+    if (!/^k[1-9][0-9]*$/.test(keyId)) fail('--key-id must look like k1, k2, ...');
+    const all = readJson(TRUSTED, {});
+    const entry = typeof all[v.identity] === 'string' ? { k1: all[v.identity] } : { ...(all[v.identity] ?? {}) };
+    if (entry[keyId] && entry[keyId] !== v['public-key']) {
+      fail(`${v.identity}#${keyId} is already trusted with a different key; key ids are permanent, so a new key needs a new --key-id`);
+    }
+    entry[keyId] = v['public-key'];
+    writePrivate(TRUSTED, { ...all, [v.identity]: entry });
+    console.log(`trusting ${v.identity}#${keyId}`);
   },
 
   config(v) {
     const p = profile();
-    writePrivate(PROFILE, { ...p, ...(v.store ? { store: resolve(v.store) } : {}), ...(v.operators ? { operators: list(v.operators) } : {}) });
+    let anchor;
+    if (v.anchor) {
+      const m = /^(\d+):([0-9a-f]{64})$/.exec(v.anchor);
+      if (!m) fail('--anchor must be SEQ:HASH as printed by `hour-time head`');
+      anchor = { seq: Number(m[1]), hash: m[2] };
+    }
+    writePrivate(PROFILE, { ...p, ...(v.store ? { store: resolve(v.store) } : {}), ...(v.operators ? { operators: list(v.operators) } : {}),
+      ...(anchor ? { anchor } : {}) });
     console.log(JSON.stringify(readJson(PROFILE, {}), null, 2));
   },
 
   whoami() {
     const p = profile();
     console.log(JSON.stringify({ identity: p.identity, store: p.store ?? null, operators: p.operators ?? [],
-      publicKey: readJson(KEY, null)?.publicKey, trusted: Object.keys(readJson(TRUSTED, {})) }, null, 2));
+      keyId: readJson(KEY, null)?.keyId ?? 'k1', publicKey: readJson(KEY, null)?.publicKey, anchor: p.anchor ?? null,
+      trusted: Object.fromEntries(Object.entries(trustedKeys()).map(([id, ks]) => [id, Object.keys(ks)])) }, null, 2));
   },
 
   claim(v) {
@@ -187,9 +245,7 @@ const COMMANDS = {
     if (v.start || v.end) { need(v, 'start', 'end'); payload.startAt = v.start; payload.endAt = v.end; }
     if (v.timezone) payload.timezone = v.timezone;
     if (v.amends) {
-      const store = openStore();
-      const current = currentEventId(store, 'contribution', payload.contributionId);
-      store.close();
+      const current = amendTarget(v, 'contribution', payload.contributionId);
       payload.version = current.version + 1;
       payload.amends = current.eventId;
     }
@@ -213,9 +269,7 @@ const COMMANDS = {
       parties: list(v.parties), currency: v.currency, basis, [field]: int(v, flag), termsRef: v['terms-ref'],
     };
     if (v.amends) {
-      const store = openStore();
-      const current = currentEventId(store, 'agreement', payload.agreementId);
-      store.close();
+      const current = amendTarget(v, 'agreement', payload.agreementId);
       payload.version = current.version + 1;
       payload.amends = current.eventId;
     }
@@ -269,6 +323,8 @@ const COMMANDS = {
 
   instruction(v) {
     need(v, 'obligation', 'payee-account', 'out');
+    const me = profile();
+    if (!(me.operators ?? []).includes(me.identity)) fail(`only operators may sign settlement instructions; ${me.identity} is not one`);
     const store = openStore();
     try {
       const payload = buildSettlementInstruction(store, v.obligation, {
@@ -305,9 +361,18 @@ const COMMANDS = {
     }
   },
 
-  head() {
+  head(v) {
     const store = openStore();
-    try { console.log(JSON.stringify(store.head())); } finally { store.close(); }
+    try {
+      const head = store.head();
+      console.log(JSON.stringify(head));
+      if (v.record) {
+        writePrivate(PROFILE, { ...profile(), anchor: head });
+        console.log('recorded as this profile\'s anchor; every later open must contain it');
+      }
+    } finally {
+      store.close();
+    }
   },
 };
 

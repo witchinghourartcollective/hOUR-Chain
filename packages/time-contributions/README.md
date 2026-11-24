@@ -56,7 +56,11 @@ hour-time obligation --obligation-id obl-1 --contribution-ref contrib-s1@1 --agr
 hour-time instruction --obligation <event id> --payee-account 1:USR:DEM:... --currency DEM --out instruction.json
 ```
 
-A collaborator without access to the store adds `--out file.json` to any write command, which signs without appending, and sends the file to whoever holds the store, who runs `hour-time append file.json`. Corrections use `claim ... --amends`. Disputes require `--reason`. `hour-time head` prints the `{ seq, hash }` to record as an anchor.
+A collaborator without access to the store adds `--out file.json` to any write command, which signs without appending, and sends the file to whoever holds the store, who runs `hour-time append file.json`. Corrections use `claim ... --amends`; offline, name the version being corrected with `--amends-event` and `--amends-version`. Disputes require `--reason`.
+
+- **Keys:** signers are `identity#keyId`. `keygen --rotate` creates the next key id and keeps the old public key trusted, so earlier events still verify. `trust --key-id` adds a collaborator's new key and never overwrites an existing key id.
+- **Anchors:** `hour-time head --record` saves the current `{ seq, hash }` as the profile's anchor, and `config --anchor SEQ:HASH` sets one recorded elsewhere. Every later open must contain it. Keep a copy somewhere the store's host cannot rewrite.
+- **Instructions:** `instruction` refuses unless your identity is one of the configured operators. The adapter enforces the same rule independently.
 
 ## Storage
 
