@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hourchain.example/schemas/payloads/settlement-instruction.schema.json",
+  "title": "hOUR Chain Settlement Instruction payload",
+  "description": "Content-addressed payload of a settlement instruction event (SPEC.md 'Settlement instruction'; ADR-0009 section 1). A deterministic calculation of who is paid what, on which network, from which approved contribution and agreement versions. It references approved records and never approves time or rights itself. Each leg pays one recipient; the adapter derives its settlement ID from the instruction's eventId and the leg index.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "network",
+    "currency",
+    "contributionRef",
+    "agreementRef",
+    "obligationRef",
+    "legs",
+    "approvals"
+  ],
+  "properties": {
+    "network": {
+      "type": "string",
+      "enum": ["base", "lightning", "solana", "offchain", "gcul"],
+      "description": "Must equal the envelope's network field."
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Network currency code, for example DEM on GCUL integration-testing."
+    },
+    "contributionRef": {
+      "$ref": "#/$defs/versionedRef",
+      "description": "Approved time contribution, as id@version."
+    },
+    "agreementRef": {
+      "$ref": "#/$defs/versionedRef",
+      "description": "Approved compensation or rights agreement, as id@version."
+    },
+    "obligationRef": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Event ID of the calculated payment obligation this instruction settles."
+    },
+    "reverses": {
+      "type": "string",
+      "minLength": 16,
+      "description": "Event ID of the instruction this one corrects or reverses (ADR-0009 section 5). Absent for an original instruction."
+    },
+    "legs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["legIndex", "payee", "amountMinor"],
+        "properties": {
+          "legIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Stable position of this leg; an input to the settlement ID."
+          },
+          "payee": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Payee account on the settlement network, for example a GCUL 1:USR:... account ID."
+          },
+          "amountMinor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807,
+            "description": "Amount in integer minor units. Never a float."
+          }
+        }
+      }
+    },
+    "approvals": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Event IDs of the approvals this instruction requires before submission."
+    }
+  },
+  "$defs": {
+    "versionedRef": {
+      "type": "string",
+      "pattern": "^[^@\\s]+@[^@\\s]+$"
+    }
+  }
+}

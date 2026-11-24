@@ -63,8 +63,10 @@
         "base",
         "lightning",
         "solana",
-        "offchain"
-      ]
+        "offchain",
+        "gcul"
+      ],
+      "description": "Requested settlement network. 'gcul' is Google Cloud Universal Ledger, an external settlement adapter network (ADR-0009); like Base, Lightning and Solana its signatures are not post-quantum, so its receipts are external receipts."
     },
     "nonce": {
       "type": "string"

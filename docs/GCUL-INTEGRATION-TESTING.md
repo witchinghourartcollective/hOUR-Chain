@@ -54,4 +54,4 @@ A user account's balance can be read only when the query is signed by that accou
 
 1. Adapter design: proposed in [ADR-0009](ADR-0009-gcul-settlement-adapter.md) (mapping, payment-level idempotency, reconciliation).
 2. Apply for `user-testing` access (gcul-help@google.com) with ADR-0009 and the evidence above.
-3. Next per ADR-0009: add `"gcul"` to the envelope `network` enum, then build the adapter service and reconciliation job.
+3. Envelope `network` now accepts `"gcul"`, and settlement instruction and receipt payload schemas are defined in [`specs/payloads/`](../specs/payloads/). Next per ADR-0009: the adapter service and reconciliation job.

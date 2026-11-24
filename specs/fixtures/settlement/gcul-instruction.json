@@ -1,0 +1,15 @@
+{
+  "network": "gcul",
+  "currency": "DEM",
+  "contributionRef": "contrib-test-0001@1",
+  "agreementRef": "agree-test-0001@1",
+  "obligationRef": "evt-test-obligation-0001",
+  "legs": [
+    {
+      "legIndex": 0,
+      "payee": "1:USR:DEM:022nXHgAmjMB8mXkdDcqA3HaR9D8EyXD6vAj6urJ7qJ68",
+      "amountMinor": 100
+    }
+  ],
+  "approvals": ["evt-test-approval-0001"]
+}

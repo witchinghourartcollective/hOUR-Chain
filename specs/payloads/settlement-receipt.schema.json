@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hourchain.example/schemas/payloads/settlement-receipt.schema.json",
+  "title": "hOUR Chain Settlement Receipt payload",
+  "description": "Content-addressed payload of a settlement receipt event (SPEC.md 'Settlement receipt'; ADR-0009 section 4). Emitted by the adapter for one leg after reconciliation. Links the network's receipt to the instruction, with finality status. Receipts are never edited: a reversal or dispute is a new event.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "instructionEventId",
+    "legIndex",
+    "settlementId",
+    "network",
+    "networkTxRef",
+    "payee",
+    "amountMinor",
+    "currency",
+    "finality",
+    "reconciliationRunId"
+  ],
+  "properties": {
+    "instructionEventId": {
+      "type": "string",
+      "minLength": 16
+    },
+    "legIndex": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "settlementId": {
+      "type": "string",
+      "pattern": "^hst1_[a-f0-9]{40}$",
+      "description": "hst1_ + first 40 hex chars of sha256(instructionEventId + ':' + legIndex) (ADR-0009 section 2)."
+    },
+    "network": {
+      "type": "string",
+      "enum": ["base", "lightning", "solana", "offchain", "gcul"]
+    },
+    "networkTxRef": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Network transaction reference, for example the GCUL transaction hash."
+    },
+    "contractId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Settlement contract that recorded the receipt, for example a GCUL 1:CTR:... ID."
+    },
+    "payee": {
+      "type": "string",
+      "minLength": 1
+    },
+    "amountMinor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9223372036854775807
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 1
+    },
+    "finality": {
+      "type": "string",
+      "enum": ["final", "reversed", "disputed"],
+      "description": "final: reconciled and settled. reversed: superseded by a reversing instruction. disputed: reconciliation mismatch under review."
+    },
+    "networkRound": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Network round or block in which the transaction finalized, when the network reports one."
+    },
+    "reconciliationRunId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Reconciliation run that checked this leg against the instruction and the ledger."
+    }
+  }
+}
