@@ -68,7 +68,8 @@ try {
     const after = await balances();
     step('balances after', after);
     const report = await adapter.reconcile({ instructions: [instruction], runId: `recon-pilot-${Date.now()}`,
-      balances: { before: balancesBefore[OPERATOR], after: after[OPERATOR] } });
+      balances: { before: balancesBefore[OPERATOR], after: after[OPERATOR] },
+      knownPreAdapter: ['hst1_test_0001'] }); // hand-run contract v2 test, 2026-11-23
     step('reconcile', report);
     step('leg history', Object.fromEntries(adapter.store.list().map((l) => [l.settlementId, adapter.store.history(l.settlementId)])));
   }

@@ -90,14 +90,16 @@ export class GculSettlementAdapter {
       const leg = this.store.get(settlementId);
       if (leg.state !== S.APPROVED) throw new InstructionError(`${settlementId} is ${leg.state}, not APPROVED`);
 
-      // Never retry blind (rule 1): if the ledger already has this receipt, do not pay again.
-      if (leg.attempts > 0) {
-        const existing = await this.ledger.getReceipt(this.contractAlias, settlementId);
-        if (existing) {
-          this.store.transition(settlementId, S.SUBMITTING, { lastError: 'pre-check found an existing receipt; not submitted' });
-          this.store.transition(settlementId, S.REJECTED_DUPLICATE);
-          return this.#confirmAgainstReceipt(settlementId, existing, null, null);
-        }
+      // Never submit blind (rule 1): check the ledger before every submission,
+      // not only retries. A lost or rebuilt leg table starts with attempts = 0,
+      // and the pilot showed that skipping this check then spends a failing
+      // transaction per leg (no funds move, but sequence numbers are consumed).
+      // The contract's duplicate guard still backs this up if the check races.
+      const existing = await this.ledger.getReceipt(this.contractAlias, settlementId);
+      if (existing) {
+        this.store.transition(settlementId, S.SUBMITTING, { lastError: 'pre-check found an existing receipt; not submitted' });
+        this.store.transition(settlementId, S.REJECTED_DUPLICATE);
+        return this.#confirmAgainstReceipt(settlementId, existing, null, null);
       }
 
       this.store.transition(settlementId, S.SUBMITTING); // written before the call: the write-ahead step
@@ -157,7 +159,11 @@ export class GculSettlementAdapter {
   // Three-way reconciliation (ADR-0009 section 4): expected (instructions),
   // attempted (leg table), actual (ledger). Emits receipt payloads for legs that
   // pass, moves mismatches to DISPUTED, and reports everything else as findings.
-  async reconcile({ instructions, runId, balances }) {
+  // knownPreAdapter: settlement IDs written to the contract before the adapter
+  // existed (for example hand-run tests). They are reported as known, not as
+  // orphans, so a genuine orphan still stands out.
+  async reconcile({ instructions, runId, balances, knownPreAdapter = [] }) {
+    const known = new Set(knownPreAdapter);
     const expected = new Map();
     for (const { envelope, payload } of instructions) {
       for (const leg of payload.legs) {
@@ -180,7 +186,9 @@ export class GculSettlementAdapter {
     }
     for (const [id, receipt] of actual) {
       if (!rows.has(id)) {
-        report.findings.push({ settlementId: id, kind: 'orphan-receipt', detail: 'receipt on ledger with no leg row' });
+        report.findings.push(known.has(id)
+          ? { settlementId: id, kind: 'known-pre-adapter', detail: 'declared pre-adapter receipt; not an orphan' }
+          : { settlementId: id, kind: 'orphan-receipt', detail: 'receipt on ledger with no leg row' });
       }
     }
     for (const [id, row] of rows) {

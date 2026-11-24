@@ -169,6 +169,21 @@ test('crash after submit: a new adapter process resolves from the durable store'
   }
 });
 
+test('lost leg table: legs already on the ledger confirm without sending any transaction', async () => {
+  const ledger = new FakeLedger({ operator: OPERATOR, balances: { [OPERATOR]: 10_000 } });
+  const first = setup({ ledger });
+  await first.adapter.approve(instruction());
+  for (const id of ids()) await first.adapter.submit(id);
+  assert.equal(ledger.settleCalls, 2);
+
+  const rebuilt = setup({ ledger, workerId: 'w2' }); // fresh, empty table
+  await rebuilt.adapter.approve(instruction());
+  for (const id of ids()) assert.equal((await rebuilt.adapter.submit(id)).state, S.CONFIRMED);
+  assert.equal(ledger.settleCalls, 2, 'no transaction may be sent for legs already settled');
+  assert.equal(ledger.balances[PAYEE], 100);
+  assert.equal(ledger.balances[PAYEE2], 250);
+});
+
 test('two workers: the lease lets only one submit', async () => {
   const { adapter, store, ledger } = setup();
   await adapter.approve(instruction());
@@ -218,6 +233,19 @@ test('reconcile reports orphan receipts, receipts ahead of state, tampering and 
   assert.deepEqual(report.disputed.map((d) => d.settlementId), [a]);
   assert.equal(store.get(a).state, S.DISPUTED);
   assert.equal(report.receipts.length, 0);
+});
+
+test('declared pre-adapter receipts are reported as known, not orphans', async () => {
+  const { adapter, ledger } = setup();
+  ledger.injectReceipt(ALIAS, { settlementId: 'hst1_test_0001', instructionId: 'evt-test-instruction-0001',
+    contributionRef: 'contrib-test-0001@1', agreementRef: 'agree-test-0001@1', payee: PAYEE, amountMinor: 100, currency: 'DEM' });
+  ledger.injectReceipt(ALIAS, { settlementId: 'hst1_' + 'e'.repeat(40), instructionId: 'x', contributionRef: 'c@1',
+    agreementRef: 'a@1', payee: PAYEE, amountMinor: 1, currency: 'DEM' });
+  const report = await adapter.reconcile({ instructions: [], runId: 'recon-k', knownPreAdapter: ['hst1_test_0001'] });
+  assert.deepEqual(report.findings.map((f) => [f.settlementId, f.kind]), [
+    ['hst1_test_0001', 'known-pre-adapter'],
+    ['hst1_' + 'e'.repeat(40), 'orphan-receipt'],
+  ]);
 });
 
 test('instructions that fail verification plan nothing', async () => {

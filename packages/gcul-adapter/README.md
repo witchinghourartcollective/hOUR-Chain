@@ -4,7 +4,7 @@ This package is the settlement adapter for Google Cloud Universal Ledger, as des
 
 It follows the real-hours model in [TIME-CONTRIBUTIONS.md](../../docs/TIME-CONTRIBUTIONS.md). The adapter acts only on signed instructions whose contribution, agreement, obligation and approvals are already approved. It never creates or edits those records, and settlement state stays separate from time and rights approval.
 
-**Status:** tested offline against `FakeLedger` only. It has not run against the real ledger, and no real-value settlement exists.
+**Status:** tested offline against `FakeLedger`, and piloted live on integration-testing on 2026-11-24 with simulated records ([evidence](../../docs/evidence/gcul-pilot-20261124/)). No real-value settlement exists.
 
 ## Modules
 
@@ -17,9 +17,9 @@ It follows the real-hours model in [TIME-CONTRIBUTIONS.md](../../docs/TIME-CONTR
 
 ## Guarantees (and the tests that hold them)
 
-- **No double payment.** Contract v2 rejects a repeated settlement ID atomically. On top of that, the adapter writes `SUBMITTING` before every call, checks the ledger before any retry, and allows only one submitter per leg through a lease. Tests cover a timeout before commit, a timeout after commit, a crash after submit (recovered by a new process from the durable store), a late commit after a leg was marked `FAILED`, a forced resubmission, and concurrent workers.
+- **No double payment.** Contract v2 rejects a repeated settlement ID atomically. On top of that, the adapter writes `SUBMITTING` before every call, checks the ledger before **every** submission (so a lost or rebuilt leg table sends no failing transactions), and allows only one submitter per leg through a lease. Tests cover a timeout before commit, a timeout after commit, a crash after submit (recovered by a new process from the durable store), a late commit after a leg was marked `FAILED`, a forced resubmission, and concurrent workers.
 - **Instructions are verified.** The schema, the `gcul` network, the currency, the payload hash, the ML-DSA signature (through `pqc-profile`) and every referenced approval are checked. A failing instruction plans nothing.
-- **Reconciliation is three-way.** It compares instructions, the leg table and on-ledger receipts. Matching legs become `RECONCILED` with a schema-valid receipt payload. A field mismatch becomes `DISPUTED`. Orphan receipts, receipts that are ahead of their leg's state, legs that were never planned, and operator balance gaps are reported as findings.
+- **Reconciliation is three-way.** It compares instructions, the leg table and on-ledger receipts. Matching legs become `RECONCILED` with a schema-valid receipt payload. A field mismatch becomes `DISPUTED`. Orphan receipts (excluding declared `knownPreAdapter` IDs, which are reported as known), receipts that are ahead of their leg's state, legs that were never planned, and operator balance gaps are reported as findings.
 
 Run the tests from the repository root with `npm test`.
 
