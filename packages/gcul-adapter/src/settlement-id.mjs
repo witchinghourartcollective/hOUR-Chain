@@ -9,6 +9,25 @@ import { createHash } from 'node:crypto';
 
 export const SETTLEMENT_ID_PATTERN = /^hst1_[a-f0-9]{40}$/;
 
+// Derive instruction IDs together so duplicate indices are rejected before any ID is derived.
+export function deriveSettlementIds(instructionEventId, legs) {
+  if (!Array.isArray(legs) || legs.length === 0) {
+    throw new TypeError('legs must be a non-empty array');
+  }
+  const indices = new Set();
+  for (const leg of legs) {
+    if (!leg || !Number.isSafeInteger(leg.legIndex) || leg.legIndex < 0) {
+      throw new TypeError('legIndex must be a non-negative safe integer');
+    }
+    if (indices.has(leg.legIndex)) {
+      throw new TypeError('legIndex must be unique within an instruction');
+    }
+    indices.add(leg.legIndex);
+  }
+  return legs.map(({ legIndex }) => deriveSettlementId(instructionEventId, legIndex));
+}
+
+// For a single leg, such as a receipt; use deriveSettlementIds for instructions.
 export function deriveSettlementId(instructionEventId, legIndex) {
   if (typeof instructionEventId !== 'string' || instructionEventId.length < 16) {
     throw new TypeError('instructionEventId must be a string of at least 16 characters');
