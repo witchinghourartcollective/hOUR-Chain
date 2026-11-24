@@ -36,10 +36,11 @@ A rejected event changes nothing.
 `DurableRegistry(path, { resolveKey, operators, expectedHead? })` has the same query API as `ContributionRegistry`, and persists events in SQLite (`node:sqlite`):
 
 - **Atomic appends.** Each event is validated and written inside one `BEGIN IMMEDIATE` transaction, so a rejected event never reaches disk and two writers cannot interleave.
-- **Tamper evidence.** Every row carries `entry_hash = sha256(prev_hash + "\n" + canonical event)`. Every open checks contiguous sequence numbers and the unbroken chain, then replays the whole log, re-verifying every ML-DSA signature, payload hash and rule. Edits, insertions and deletions refuse to open, even if an attacker recomputes the chain.
-- **Truncation.** A chain cannot reveal that its newest rows were cut off. Record `head()` (`{ seq, hash }`) somewhere independent, for example by anchoring it on a ledger, and pass it back as `expectedHead`.
+- **Corruption and naive tampering.** Every row carries `entry_hash = sha256(prev_hash + "\n" + canonical event)`. Every open checks contiguous sequence numbers and the unbroken chain, then replays the whole log, re-verifying every ML-DSA signature, payload hash and rule. An edited, inserted or removed row refuses to open.
+- **No rollback.** A running instance never moves backwards. Once it has verified an entry, any later state must still contain that exact entry. Deleting a trailing amendment, or rewriting history to the same length, makes the store refuse to answer, so a stale obligation cannot become payable again.
+- **Deliberate rewrites need an anchor.** Someone with write access to the file could delete events (for example a dispute), renumber and recompute the whole chain while nothing is running. Replay accepts the result if the remaining events still form a valid workflow. To detect that, record `head()` (`{ seq, hash }`, including the genesis `{ seq: 0 }`) somewhere they cannot rewrite, for example on a ledger, and pass it back as `expectedHead`. The anchor is enforced on every reload and covers all history up to its `seq`.
 - **Several processes.** Every query and append first picks up rows appended by other processes. A settlement adapter in one process therefore sees an amendment made in another, and cancels the stale leg instead of paying it.
-- **Backup.** `exportJsonl()` writes one canonical signed event per line. `DurableRegistry.importJsonl(path, text, options)` restores the backup into an empty store and re-verifies every event.
+- **Backup.** `exportJsonl()` writes one canonical signed event per line. `DurableRegistry.importJsonl(path, text, options)` restores the backup into an empty store, all or nothing: the whole backup is verified, and checked against an optional `expectedHead`, before anything is written.
 
 Replay re-verifies every signature on open. That is fine at pilot scale; larger logs would need verified checkpoints.
 
