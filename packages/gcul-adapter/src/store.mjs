@@ -107,8 +107,8 @@ export class LegStore {
 
   list({ state } = {}) {
     const rows = state
-      ? this.db.prepare('SELECT * FROM legs WHERE state = ? ORDER BY created_at, settlement_id').all(state)
-      : this.db.prepare('SELECT * FROM legs ORDER BY created_at, settlement_id').all();
+      ? this.db.prepare('SELECT * FROM legs WHERE state = ? ORDER BY created_at, instruction_event_id, leg_index').all(state)
+      : this.db.prepare('SELECT * FROM legs ORDER BY created_at, instruction_event_id, leg_index').all();
     return rows.map(toLeg);
   }
 
