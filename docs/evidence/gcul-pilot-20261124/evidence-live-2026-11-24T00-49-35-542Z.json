@@ -1,0 +1,219 @@
+{
+  "mode": "live",
+  "startedAt": "2026-11-24T00:49:35.542Z",
+  "simulatedRecords": [
+    "contrib-pilot-0001@1",
+    "agree-pilot-0001@1",
+    "evt-pilot-20261124-obligation-0001",
+    "evt-pilot-20261124-approval-0001"
+  ],
+  "instruction": {
+    "envelope": {
+      "eventId": "evt-pilot-20261124-instruction-0001",
+      "protocolVersion": "0.2",
+      "schemaVersion": "1",
+      "eventType": "settlement.instruction",
+      "actor": "hour:pilot-operator",
+      "subject": "contrib-pilot-0001",
+      "issuedAt": "2026-11-24T00:22:24.929Z",
+      "payloadHash": "9351f71740ac9bd5bf81c95559ad14a69ef1ad5dee148151e554b8599ddc171d",
+      "network": "gcul",
+      "signature": {
+        "algorithm": "ML-DSA-65",
+        "suiteVersion": "1.0.0",
+        "signer": "hour:pilot-operator#k1",
+        "value": "L1yv7-_vhc6Ww-QlEV0b5TpZ2rB_OOokAieuqRuEKsyiubCp6Pjn1hXDSA37LWf38Xy-V_wDuFM1zQ4Ji-pEdjMGHxUUjNORUDtKH2rpBWkagax3LKK_0XKVg1RBiSUlIKwS9-DiAGmJFEqkqRkV1wZlg4b8GEzRAhkIbvC7lGT1fdfWhYXR4-hEwIgb6J-99GJepvq3mzrlpz7ZCgzcNtPfQ4gE5ScE3E4Kq0C0iNZJCZ5jGDCE9Et_RewAeGgksZG4yq5LcEv2lCJ0Vj3T5Db20AWc6y8RtsURLnOH1YvXB00F9dBTZDx1H7KDT9yX7yiO1rj7xclFkZh-xoDZ72re9CVKchiSsywtQgh6Z1CDEZX0POpnGZCka7jxIAY-e9SlRZlp895rVferN3Ue5KhjIJlzdyjJJFMp_J8LRxO0bXjWHo8RJimbabPvwHCiUaIesQXPy_1f8ahtOSavWI3Ntgejwlrjqw4-tEvNqJiB5YH3RJQiaER8gCHEk2FXdYE1qL4fq72tyg6ECSH5VEn6KJQCXu3Y5oT6KRohp_HJVeiBDuKQhGpiQ0Yj1I1iBsITrzwjmcUaeXi4Hf0NgAey9ZiuYhc_AdocRnav5iYY0OHXM3d_a5SI3yAf3_RqX4fCGmLaEfnZ-8qD8TBJHgivDJsvJTbOmE_18gY-VSDjeBA3CgZlC2bMAXyu0qLHlaEDqj_lWAV9tFPelCB9lnVI58Cjk6BNUgcZcE2efHhf0m1nhnyyxKYgdxRB5VOqMvvQHYpafWvwzd7JZokTfZT8jAqDuvkF7JQTNULSqB-OUm6skCILx7_YDqoNz0KHrug4Jbv21E1CaVeNrBr1eIQXCpibvajNZH1gPo839dl6uSS4vXWmt6ucu-TuxxNtomx_20jdRAmi2t-AI7ZJhG-l3805ze7TTZ5DGopmS6WpAEqFz0SUmqq8qGDVU0q0sQB3cDtVth9KSnsR9svwldfwqxTvqzrY07e9uHeMrULZWCXIO0iHWc5G9dLk_5aMjLmPeON2pG7haob_jVPLBgPYuzY18I_Q5EPXt-L6GbErdea6ivupuQPVh9kIi0sozqyS7S3DVXwrB8Nag4VviqDMMpvfGJXt6_WSQY_0SH5qAijNZdgJhgdLwjRBFMEeCppgRLMeFdrSmM2gvCrL14MSn4JArYBTpWN0wx-rK6eIqy9_4pFuEPtz2avZE2HipKJMM7yP7nBlAzcgqZfxmuJKLeidonPwChsTV2pGlm2srrYvyHcPYiRG5ESxSsTzS0F8FHahMDtJpa9hZ-v-cweE3CgB7RiR6DprZiDsAbatXe4PrtNbGIx3yH6P6Te7b6CcbIL3i29g3sYg6h-Job9pwI2Zd_w4fV6VzgcHa8YG91IU184XhCSwowQIsr5ZQAZVU2OSWuoLTwAY9WtHMstvsfiCYiMP1WFNdFkgzxQmhCnsMlPnVn1hNKr5ydHC3qft0hWCXCPT9VPuVoX5FbdbGbks-NaP2aBPLNA8x1L67IgN2552YhOWbh6YQo04rCb_NVYPAoPAUQnjVmmHbLhBwHSEB_F-t7mh9PySGivNj2J1h6i3MCUA9IFlA8duwNVr7pY66OswEo-oiuTW6CWXNTSitn_cW__cZ_bDzbOYkrxPIfGkvCMIUki94F-pRXARe5Ow1BMjiMG98lhlKwQaGy9sYt2l4nfM7TY8jhVYcdlQROS_VpdZKE8lpl_CcNWrsIFjgNl6viEXiaDDt-8qHpjE4sUjn-CO8WbroxmJv1Fp_NJdhJ9tgUiUIU4wLUrETU74gd9aVYENIWkjj7CG7N5W2hdK4RooIdjncslGpDXlMm9envMSQNW2Elp3Flehkv2mhwj2_ogqZkTdJhrr81A19Zvw9Dtx52fa7y5Npff7VqtrvQp0GcWMgYRLUjESrMp1qTYLmILTFdjEkT3WE35R7vRPSpP43OH1dMRFb2l0rfyf4YgtJBkofgKq1MU_lfwGn82SmFEwNmgc7av9oHOLENxzbR7-uuqFzOynRXKJjFkBRQuaMREs7F04e6p6xvsH0ci1iRVPSHjE0IZGioyfnR7YCCNDB5Y4h0cucdOiGBZsstUOVrF78usQZ7gLpSBAkBIEFDkcwR7oZe_fNTsv5SwLaGmN546wLZHkFI9355M9HPhyTq2CihXBkWY496flSN_zsyrCMBv4T9dqdd4k9dGQ3T32JkO8bC929qsYBhNT0FVDlRClonsQhy2v6HRKwCyN77eV8_hVdj3r9vTfV9X-8gDTs9mpEK2-qxE-4QDGUm7Qg8GkaiPA5wvJDIf5yh8siQbcErkvwKXfN9DmrrVF_viB1aG2ZtfO7Rm54HJjqbmowSF5Wfrjdcvjspti5Zqv0oQBt63zw5sVSlaVKa18yHedQ7NiQCSgsbhPMUhH7Ow5bvxg9Djk_s5R12lBMlyv-xzcZyvEdjYBIf9XM8i6xLgHWO3ymC-EGtpeygPfzQphbVAXfqyPW-SV1E2ddU86qqod9wwOhGXNnB_agEt6b2ykRbr4bSNdwjErEa7eTmERqBcYbuSd8dS0XqP8aUfHP19RfbGinAFQx05Fuffh4Cnh8PdVC-3Q8CVlK9aTRRcmIw9dTH2tUv4rd5xRmW-qf8d52kYdVpIilPoQBlCLUkMEv-WXN2uu0O8n4LswuCvDTytUFZpop8wAM7tx5XTWWWLulT0J5DAyBgIhvelFx7xaO0Hv8dmLsF6t6-NCB0aFheNPCMNKfyu3e35n2wtGrV67dF251Tmp0ylTCvmxvZmdMxmZ8GYgJblTFhZOW2vYImkkTiUNsAdD9T_dl-FVVkS6rYSiDW6znsrnSjWW6PLWDNuFKZqXd0-UbMHAWfNdZiA2eNSrr3rKVZDREZ20iOSc4eGVlcLI_rjZQyWEP4yPVfnYz64_J63aW6YZX2tCbd-S5NlnSZGd4H-12eEgJtkdX-McoJXwmijIr8XEopMNAKqY3nFVyUwhY3zpcgQ_-Fup6KTtOonjoF2qFhhEpsFX70x3kG3_fNG7e1RXFQsigzjffJuWZOmsGBElD077Ui6lizPeJsRzVjZoYYtwOmm-5nvG7_opES1-X_t5sdawLTFi-K29F5iI38FEWfU0d7HFLBh1SXz4H-RqxWBr7so70xlsEdj7JGvTYfIKdE8RPaXyWRQ09dikZrogIsbFn0xHA0HAaCY5ZDoTNuQt7iLaScCaciL5dQOYjjcPUnjck2pCAB2i5Ibt0htUVWXsyTjrb3fq3YclYR9p1DI0-0LZKiCEflOkGPFPJMwcy9oQd610R8oUX-ZOPPWlCrPUiwaxrpNodCLWhE-682UlKxTTLAi2aexwvmMaHEgvujIcX8eI22iEQzUj8g2D7WMq4tZMvrSOLwUZHbGIpBvi9lDpdUgkbx0ljqHM5efjNUrIG4wMvzbOhIgzygBeL4eMrMvDZncFtmh7thEZM6iaF7lx39ns-PV1RLMqu64_0FHEsmkaUUnlcAURw0VHqkSAuSa4oKTfdkgQYynEFLH0vnUEFPgEC8J7ahO9LyEMewgjjLlNTr_KwwWjqevc9cBCB8a4kgjaPT26Jdwfi3qWKnoGp6_-iCv_tuaDxBwJhg3bGrUoQpQ3SefZXTqgoalQ3m7qu9o5aZosOtrgOBShBdpnpKJKuSnFd1-QIzkCQqZHUdZp4HxdavLHYycQ9Q0AiJYa6x3b4LKLDbTnHJ7Vvb9NvTO73ihCr04cgtpkAb7wHJAmcPHudZQCYznGJrnybromh_vUWGTtH-Peae37bU-LZV8lHPUWedInz0p3m1gD4E357DikqVJ7eWGsM1NKO18JgYmjUG3NqYBrMZK4NL8O739O92dwVFk3yyzAeuyBzrdlZEnWnUtu9T591uGOf78uoqtbpNrdD6fol3c85l4tzStTcg2fcUgx58KYnJRyEgQ9P6R2JdzM73-gpuMeMfg3vgMr1nPtkgPQJcn1lOoRvUtxxPdBH766TKLP3S2iVy47j6o0jdW34bbfLj73V4WNrsBGKvvL_nPpJdphBkxTsklcKIaCSHCOrRDC3GDNFm3a9mrQjMs3i7KLLRCjgiRZooyyQM_u25tSltehPiMP8URs7Haqc3H3NlI1B7L51GitlcK54B2ookqtIbHp3YSXJ-d9q4HCi8SEfPgNkBV7ikvNC_m-jcfGu4ckvp0_3ogv5ul-WGv50eAh1bACaRNz5wfKDqlWN8j0kE1BPntjStvB4HxSzbr0jVN4e1KaS7beZ1Z2Bp308_H-afmEx7D5WEVRIYnd4gNq7zN99OrHpMfnqTBtsAtO0BE2kMzifVYifP_4-x53eYWnq7vbGTlWZ2hz8FdYXmaUnc_b-x1ye4qUpuDzAVRvdeTwAAAAAAAAAAAAAAAAAAAAAgoRGiIo"
+      }
+    },
+    "payload": {
+      "network": "gcul",
+      "currency": "DEM",
+      "contributionRef": "contrib-pilot-0001@1",
+      "agreementRef": "agree-pilot-0001@1",
+      "obligationRef": "evt-pilot-20261124-obligation-0001",
+      "legs": [
+        {
+          "legIndex": 0,
+          "payee": "1:USR:DEM:022nXHgAmjMB8mXkdDcqA3HaR9D8EyXD6vAj6urJ7qJ68",
+          "amountMinor": 40
+        },
+        {
+          "legIndex": 1,
+          "payee": "1:USR:DEM:022nXHgAmjMB8mXkdDcqA3HaR9D8EyXD6vAj6urJ7qJ68",
+          "amountMinor": 60
+        }
+      ],
+      "approvals": [
+        "evt-pilot-20261124-approval-0001"
+      ]
+    }
+  },
+  "signerPublicKey": "MIIHsjALBglghkgBZQMEAxIDggehAD6SYv-0RIM9xY6eEC_j2ZxFiQM3_Zs3QNDFQiNmJvzLtrbnBF96VMBP6GOSPpBKq-SGI07CI-1CCk9KITUb4GIBBIrsYSugYxcGhOiLRsO5Ku05r6C3SffNBMgFrlyAIESTtrgG4Z43fL4jc-XNbWjczSl3xratLh7ohT6GpCfThIVEehE2fhMmjFwztqOBH66Bi41artOJH621BJjoomHmXasyDSySLSZkyh2WBleGHBE_gvOHLavf6IF-LUkLOjpOqPWjlkIoLf57p0vrOlB0rBuQhbaGZZLCBLeW1EysX8pRi7MwtG8uGim_YJC3zF_yNFdRAUTx7iJNovLjMuGAv8WB0ysmD4xIwpshb7nTj9ws-DWy0zDDuXDRCKZtUs83k4V841z3iDHLL_kN8_3gY_PAuiCWb8-Y7i-keRd3DgUjjGsnAZF1VPls5GbexC-cMCHjIJb9-hJZIb_uLYfwKjpMehx_v9bM1FjAKHMeFApaEl5WsdVYb00Sr2_R3xtJzlwXExotu_a7nR9K5U7XE0gwabfdCy9TmR65wr4ZMatSzJbajlMp4mIT7y2DncqVpFBn5fHr3xXbqvDiiyhFzR67OxerhjAznHVgHKZDZnuxNJ_TXA3PhcsfTSD4yrRE9xWtf5d8BKa-QtuXSrwBsGuBe4UNhc7BR2JyqdtwiHMe17KqVtz0eNYfFyXvsqbSCDSCf8Z6dIK8V3gYR8F6Y0PRBxEt5UnfboBhoudr8IEWCb8jv650jMNaMcZ8jQgwgBHBIQLM_MO8cKEbE8qdtknOhRbMKYux4CjNBUGF3XO2mUgFQXklBEgxNK-VoW65yNOSzXgeyiCry3u-Qeq9cjXY0cWmhc_QBELryZEXlUtmqO5mjqHfOrBhUvfPLx_DGLWHE42vjDSZhYoEpsFKyDo6syTplKVgq_SbxcjJOzyVUZldYdLRMfZYOeWaurg_M2DPMYQvqlrRX_sFbfuRIGJQ6WhauEhxglgp0lfkAtxv8raQRo2tbynQ1BRwwh5qNCicXWIbE9ZyeuGMai_lIPL_jBVW5-G156DX9DgaN73mIaidn5VTZC73Fo7zUFkoiP0BCpIBaygF5qTFc-l4TVi1vZRJT19AEoAuhpymJXdi3q9aiGcEYsrUachbcZr-B7COiPwHICCZssip0YbPN8Al-E_6TDMUyE6i0x6x9eaL6z4FGo3z0_nCWv8K7rWZFMg4Tri3J3vIWP47lIZFEWBiiAo0Eqxp4pL0UEhf7e5Z7DWMblNpnIVZuDcrxL4g3PJwLYjBTrdKKCrmSRazvZb34Qgv_L4NJBGgCSPMbff6Mmuh2CAmT86-LyKxZUGi6Rnlgq6oTE_1Zcw7_R12LrhOPqDo0kzBjpG_7f2yPmxZxP9w7Ckoi0lvKLP4CKlxJPabCC4CJdi93DJ4JLF-r5yZKlzpj0zfVCV19BurThWe3MeCEW-2B5QVS9e8I2GagVH5ZZWJ3T_dBRsWtHn6qqs7sPNrk4SLYvFNubg-aXdH6ZeRnozDX29PTjfSEr7L4hNFP5oVxXnbYw5J3Gy9atte5M2dGUXUMb-vH96bB9HM22oXVUluELCLa7tAofOW_m8mshO9vvDixPLXBLXr0qkWzFGJrH037GR8qqhzCBG6FqppUs9xw4Mp4YuyMx8psu3--Qz5OGdZTAxVGt64TxNS7gymwc286Ftf0hA7KfGkkZnumf05dbAweDObYpi98mmzbO1rrfjTsb8FGCWaxgOx83jYkh7XTkuCExoaHYif-tsMFZBgsDEgJtuBtbaPbVRfsVbxTpq5X2DgbqBI_sAUOqnpmiR0fzCYIRAZ0burQRVjP2T5do1c10XzsUK24VJiK0hzCNQxtl8_wcwdwBHox3IcA4JoeolnMvw61LjGeAs-BoLjWjLrk8OFwWAf_Cb4gQOp3-YkZ3zWrF6AN4zMqrIPTUc3DHSnHxFwKjIcp-Jz95PaiTkcJN2Saj3jLaQHQpIU4pko2kicjOLRsqGPmgQBqR4m6rhOkbbGdwAIUFOM0IafroSNHD2aJgHN_NVu_bg55zouIBQCW8pBbdkKbHJDxgdtv-MmixUx1yPEnQQoygbgJqg0VlD0EukNDo2sM5eHzHdP-3PkwlufBrhxmVvzCv_WAXS7cOVc4DPSCF19uIHOIDOEueMM2XdFjwysnnMBhBFrL1_4IMqQfy2RB6i1vdC47Y4qkQEnGMHX3AoTOCSQFGsQ-WGUP0uIMdwk39aESeP7Qcj410CX7NYAKpqHfAQa32oCdvxpVZbvCch3-wx9_f2oSXwmPQftohgct3eMEniPfs0MbPgvxunuhNWBmRshjk8pStu3X3j7gLcOaD-Adpmlrr4gd-km3ldpc7P3kpoglusQAA9fo-iCE43F0-sccjy0iT7jEggJoPwjhZJY8nsOj0iQ5v_qWtmd61Xq8QbEIhr1lwwDYPQk0BOdgqc85ytqbrjXrHm2-VqPqqgOpT0xUq2_X9Fbh6VeppBUfzg0PCuvpoENcrbKdHGJd1BKGnFK4UjQpCbgavn3mqah-jDGjqoSWP9JvRmGPn2O7wlx86597VpTtYkm5Cn33EvYef2tqa4C",
+  "steps": [
+    {
+      "name": "balances before",
+      "at": "2026-11-24T00:49:37.611Z",
+      "hour_chain_owner": 2147483446,
+      "hour_chain_user2": 201,
+      "1:USR:DEM:022nXHgAmjMB8mXkdDcqA3HaR9D8EyXD6vAj6urJ7qJ68": 201
+    },
+    {
+      "name": "approve",
+      "at": "2026-11-24T00:49:39.448Z",
+      "legs": [
+        {
+          "settlementId": "hst1_7807e6322b780852d444266a57a540c2a8cb6719",
+          "legIndex": 0,
+          "state": "APPROVED",
+          "amountMinor": 40,
+          "attempts": 0,
+          "txRef": null,
+          "networkRound": null,
+          "lastError": null
+        },
+        {
+          "settlementId": "hst1_736e9bf16059ef4f5d7aceca25e60d4165f52da5",
+          "legIndex": 1,
+          "state": "APPROVED",
+          "amountMinor": 60,
+          "attempts": 0,
+          "txRef": null,
+          "networkRound": null,
+          "lastError": null
+        }
+      ]
+    },
+    {
+      "name": "submit leg 0",
+      "at": "2026-11-24T00:49:44.874Z",
+      "settlementId": "hst1_7807e6322b780852d444266a57a540c2a8cb6719",
+      "legIndex": 0,
+      "state": "CONFIRMED",
+      "amountMinor": 40,
+      "attempts": 1,
+      "txRef": "67716405137691b3a5000d3310d9d5efe6a9af92d49f10d7442acfc0abacd968",
+      "networkRound": 5058327,
+      "lastError": null
+    },
+    {
+      "name": "submit leg 1",
+      "at": "2026-11-24T00:49:50.462Z",
+      "settlementId": "hst1_736e9bf16059ef4f5d7aceca25e60d4165f52da5",
+      "legIndex": 1,
+      "state": "CONFIRMED",
+      "amountMinor": 60,
+      "attempts": 1,
+      "txRef": "469c6e6763b055657b948b455521ac40efe55e95c858430e0e66c8fa8725e868",
+      "networkRound": 5058335,
+      "lastError": null
+    },
+    {
+      "name": "balances after",
+      "at": "2026-11-24T00:49:52.000Z",
+      "hour_chain_owner": 2147483346,
+      "hour_chain_user2": 301,
+      "1:USR:DEM:022nXHgAmjMB8mXkdDcqA3HaR9D8EyXD6vAj6urJ7qJ68": 301
+    },
+    {
+      "name": "reconcile",
+      "at": "2026-11-24T00:49:52.796Z",
+      "runId": "recon-pilot-1795481392001",
+      "receipts": [
+        {
+          "instructionEventId": "evt-pilot-20261124-instruction-0001",
+          "legIndex": 0,
+          "settlementId": "hst1_7807e6322b780852d444266a57a540c2a8cb6719",
+          "network": "gcul",
+          "networkTxRef": "67716405137691b3a5000d3310d9d5efe6a9af92d49f10d7442acfc0abacd968",
+          "contractId": "1:CTR:005788bGkaVpczkhPsWCfVfToTxywz15AiZG5fVD1f769",
+          "payee": "1:USR:DEM:022nXHgAmjMB8mXkdDcqA3HaR9D8EyXD6vAj6urJ7qJ68",
+          "amountMinor": 40,
+          "currency": "DEM",
+          "finality": "final",
+          "reconciliationRunId": "recon-pilot-1795481392001",
+          "networkRound": 5058327
+        },
+        {
+          "instructionEventId": "evt-pilot-20261124-instruction-0001",
+          "legIndex": 1,
+          "settlementId": "hst1_736e9bf16059ef4f5d7aceca25e60d4165f52da5",
+          "network": "gcul",
+          "networkTxRef": "469c6e6763b055657b948b455521ac40efe55e95c858430e0e66c8fa8725e868",
+          "contractId": "1:CTR:005788bGkaVpczkhPsWCfVfToTxywz15AiZG5fVD1f769",
+          "payee": "1:USR:DEM:022nXHgAmjMB8mXkdDcqA3HaR9D8EyXD6vAj6urJ7qJ68",
+          "amountMinor": 60,
+          "currency": "DEM",
+          "finality": "final",
+          "reconciliationRunId": "recon-pilot-1795481392001",
+          "networkRound": 5058335
+        }
+      ],
+      "disputed": [],
+      "findings": [
+        {
+          "settlementId": "hst1_test_0001",
+          "kind": "orphan-receipt",
+          "detail": "receipt on ledger with no leg row"
+        }
+      ]
+    },
+    {
+      "name": "leg history",
+      "at": "2026-11-24T00:49:52.797Z",
+      "hst1_7807e6322b780852d444266a57a540c2a8cb6719": [
+        {
+          "from": null,
+          "to": "PLANNED",
+          "detail": null
+        },
+        {
+          "from": "PLANNED",
+          "to": "APPROVED",
+          "detail": null
+        },
+        {
+          "from": "APPROVED",
+          "to": "SUBMITTING",
+          "detail": null
+        },
+        {
+          "from": "SUBMITTING",
+          "to": "CONFIRMED",
+          "detail": "67716405137691b3a5000d3310d9d5efe6a9af92d49f10d7442acfc0abacd968"
+        },
+        {
+          "from": "CONFIRMED",
+          "to": "RECONCILED",
+          "detail": null
+        }
+      ],
+      "hst1_736e9bf16059ef4f5d7aceca25e60d4165f52da5": [
+        {
+          "from": null,
+          "to": "PLANNED",
+          "detail": null
+        },
+        {
+          "from": "PLANNED",
+          "to": "APPROVED",
+          "detail": null
+        },
+        {
+          "from": "APPROVED",
+          "to": "SUBMITTING",
+          "detail": null
+        },
+        {
+          "from": "SUBMITTING",
+          "to": "CONFIRMED",
+          "detail": "469c6e6763b055657b948b455521ac40efe55e95c858430e0e66c8fa8725e868"
+        },
+        {
+          "from": "CONFIRMED",
+          "to": "RECONCILED",
+          "detail": null
+        }
+      ]
+    }
+  ]
+}
