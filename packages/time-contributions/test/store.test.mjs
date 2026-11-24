@@ -179,3 +179,95 @@ test('the adapter settles from a reopened store and refuses a stale obligation',
   assert.equal(ledger.balances['1:USR:DEM:producer'] ?? 0, 0);
   registry.close();
 }));
+
+test('a running instance refuses to roll back when a trailing amendment is deleted', () => withDir((path) => {
+  const adapterView = new DurableRegistry(path, options);
+  const obligation = fullWorkflow(adapterView);
+  adapterView.append(ev('contribution.claimed', { ...CLAIM, version: 2, amends: adapterView.contribution('contrib-s1', 1).eventId,
+    durationSeconds: 1800, endAt: '2026-11-20T18:30:00Z' }, 'producer'));
+  assert.equal(adapterView.isApproved(obligation.envelope.eventId), false); // stale after the amendment
+  const raw = new DatabaseSync(path);
+  raw.prepare('DELETE FROM events WHERE seq = 7').run(); // remove the amendment behind the instance's back
+  raw.close();
+  // Without the rollback guard this would return true and the stale obligation could be paid.
+  assert.throws(() => adapterView.isApproved(obligation.envelope.eventId), /refusing to roll back/);
+  adapterView.close();
+}));
+
+test('a same-length rewrite of the newest entry is refused by a running instance', () => withDir((path) => {
+  const a = new DurableRegistry(path, options);
+  fullWorkflow(a);
+  const raw = new DatabaseSync(path);
+  raw.prepare('DELETE FROM events WHERE seq = 6').run();
+  raw.close();
+  const b = new DurableRegistry(path, options); // fresh instance: has no memory of seq 6
+  b.append(ev('revenue.reported', { revenueId: 'rev-x', workRef: 'work-07', amountMinor: 10, currency: 'DEM',
+    periodStart: '2026-11-01T00:00:00Z', periodEnd: '2026-12-01T00:00:00Z' }, 'hour-operator'));
+  b.close();
+  assert.throws(() => a.head(), /refusing to roll back/);
+  a.close();
+}));
+
+test('the genesis checkpoint round-trips and anchors any later log', () => withDir((path) => {
+  const empty = new DurableRegistry(path, options);
+  const genesis = empty.head();
+  assert.deepEqual(genesis, { seq: 0, hash: GENESIS });
+  empty.close();
+  const reopened = new DurableRegistry(path, { ...options, expectedHead: genesis });
+  fullWorkflow(reopened);
+  reopened.close();
+  new DurableRegistry(path, { ...options, expectedHead: genesis }).close();
+  assert.throws(() => new DurableRegistry(path, { ...options, expectedHead: { seq: 0, hash: 'f'.repeat(64) } }), /expected head/);
+}));
+
+test('imports are all or nothing, and an anchored import succeeds', () => withDir((path) => {
+  const source = new DurableRegistry(path, options);
+  fullWorkflow(source);
+  const backup = source.exportJsonl();
+  const head = source.head();
+  source.close();
+
+  const lines = backup.split('\n');
+  lines[5] = lines[5].replace('"amountMinor":2500', '"amountMinor":2501'); // corrupt the last line only
+  assert.throws(() => DurableRegistry.importJsonl(`${path}.t`, lines.join('\n'), options), /backup rejected/);
+  const raw = new DatabaseSync(`${path}.t`, { open: true });
+  const exists = raw.prepare("SELECT name FROM sqlite_master WHERE name = 'events'").get();
+  assert.equal(exists ? raw.prepare('SELECT COUNT(*) AS n FROM events').get().n : 0, 0, 'no partial prefix written');
+  raw.close();
+
+  const restored = DurableRegistry.importJsonl(`${path}.t`, backup, { ...options, expectedHead: head }); // retry into the same target
+  assert.deepEqual(restored.head(), head);
+  restored.close();
+  assert.throws(() => DurableRegistry.importJsonl(`${path}.u`, backup, { ...options, expectedHead: { seq: 6, hash: 'a'.repeat(64) } }), /expected head/);
+}));
+
+test('importing into an in-memory store keeps the data, with or without an anchor', () => withDir((path) => {
+  const source = new DurableRegistry(path, options);
+  const obligation = fullWorkflow(source);
+  const backup = source.exportJsonl();
+  const head = source.head();
+  source.close();
+  const plain = DurableRegistry.importJsonl(':memory:', backup, options);
+  assert.deepEqual(plain.head(), head);
+  assert.equal(plain.isApproved(obligation.envelope.eventId), true);
+  plain.close();
+  const anchored = DurableRegistry.importJsonl(':memory:', backup, { ...options, expectedHead: head });
+  assert.deepEqual(anchored.head(), head);
+  anchored.close();
+}));
+
+test('a running instance re-verifies when rows before its head are edited or deleted', () => withDir((path) => {
+  const a = new DurableRegistry(path, options);
+  fullWorkflow(a);
+  const raw = new DatabaseSync(path);
+  const row = raw.prepare('SELECT body FROM events WHERE seq = 3').get();
+  raw.prepare('UPDATE events SET body = ? WHERE seq = 3').run(row.body.replace('"rateMinorPerHour":2500', '"rateMinorPerHour":9999'));
+  assert.throws(() => a.isApproved('contrib-s1@1'), /entry hash mismatch at seq 3/);
+  raw.prepare('UPDATE events SET body = ? WHERE seq = 3').run(row.body); // restore
+  assert.equal(a.isApproved('contrib-s1@1'), true);
+  raw.prepare('DELETE FROM events WHERE seq = 2').run();
+  raw.close();
+  assert.throws(() => a.append(ev('revenue.reported', { revenueId: 'rev-y', workRef: 'work-07', amountMinor: 10, currency: 'DEM',
+    periodStart: '2026-11-01T00:00:00Z', periodEnd: '2026-12-01T00:00:00Z' }, 'hour-operator')), /sequence gap: expected 2, found 3/);
+  a.close();
+}));
