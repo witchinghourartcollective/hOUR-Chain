@@ -13,7 +13,12 @@ Google Cloud Universal Ledger (GCUL) is planned as a **settlement adapter** for 
   - Replaying the same settlement ID failed with `FAILED_PRECONDITION: Duplicate settlement_id`, and both balances were unchanged.
   - A payment of 100 claimed as `amount_minor=150` failed with `Payment does not match amount_minor`, and both balances were unchanged.
   - Failed transactions still consume the sender's sequence number (8 to 9 to 10) without moving funds. The adapter must not treat a sequence advance as proof of payment.
-- **Not verified:** the settlement adapter itself, automated reconciliation, mapping from real contribution and agreement records.
+- **Adapter pilot on integration-testing (2026-11-24, simulated records):** one signed ML-DSA-65 settlement instruction (`evt-pilot-20261124-instruction-0001`) with two legs to `hour_chain_user2` ran end to end through [`packages/gcul-adapter`](../packages/gcul-adapter/README.md) and contract v2. The contribution, agreement, obligation and approval records are simulated pilot fixtures. Evidence: [`docs/evidence/gcul-pilot-20261124/`](evidence/gcul-pilot-20261124/).
+  - Leg 0 `hst1_7807e632…` paid 40 (tx `67716405137691b3a5000d3310d9d5efe6a9af92d49f10d7442acfc0abacd968`, round 5058327). Leg 1 `hst1_736e9bf1…` paid 60 (tx `469c6e6763b055657b948b455521ac40efe55e95c858430e0e66c8fa8725e868`, round 5058335). `hour_chain_user2` went from 201 to 301 and the operator from 2147483446 to 2147483346.
+  - Reconciliation marked both legs `RECONCILED`, emitted two schema-valid receipt payloads, and passed the balance check. It reported one finding, `orphan-receipt` for `hst1_test_0001`: the receipt from the hand-run contract v2 test on 2026-11-23, made outside the adapter. That is correct detection of a pre-adapter test receipt.
+  - Replaying with the same leg table: approve was a no-op and both submits were refused locally, with no transaction sent.
+  - Replaying with a lost (empty) leg table: the adapter resubmitted both legs. Contract v2 rejected each with `Duplicate settlement_id`, and the adapter matched the existing receipts and confirmed them. Balances stayed at 301 / 2147483346, so no double payment occurred even with the adapter's database gone.
+- **Not verified:** mapping from real contribution and agreement records (the time-contribution workflow does not exist yet), scheduled reconciliation, real-value settlement.
 - **Not available yet:** `user-testing` and mainnet need Google approval. Real-value tokens need a Currency Operator.
 
 ## Accounts
@@ -54,4 +59,4 @@ A user account's balance can be read only when the query is signed by that accou
 
 1. Adapter design: proposed in [ADR-0009](ADR-0009-gcul-settlement-adapter.md) (mapping, payment-level idempotency, reconciliation).
 2. Apply for `user-testing` access (gcul-help@google.com) with ADR-0009 and the evidence above.
-3. Envelope `network` now accepts `"gcul"`, and settlement instruction and receipt payload schemas are defined in [`specs/payloads/`](../specs/payloads/). The adapter service and reconciliation job are in [`packages/gcul-adapter`](../packages/gcul-adapter/README.md), tested offline. Next: a live pilot run on integration-testing.
+3. Envelope `network` now accepts `"gcul"`, and settlement instruction and receipt payload schemas are defined in [`specs/payloads/`](../specs/payloads/). The adapter service and reconciliation job are in [`packages/gcul-adapter`](../packages/gcul-adapter/README.md), tested offline. The live pilot run is done (above). Next: real contribution and agreement records, and user-testing or mainnet access from Google.
