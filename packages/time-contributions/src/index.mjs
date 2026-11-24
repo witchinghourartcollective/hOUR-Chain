@@ -2,3 +2,4 @@ export { ContributionRegistry, RegistryError, STATUS, EVENT_TYPES, payloadHash, 
 export { calculateObligation, CalculationError } from './calculate.mjs';
 export { buildSettlementInstruction, expectedLegs } from './instruction.mjs';
 export { DurableRegistry, StoreIntegrityError, GENESIS } from './store.mjs';
+export { readProfile } from './profile.mjs';

@@ -223,6 +223,9 @@ export class GculSettlementAdapter {
         }
         this.store.transition(id, S.RECONCILED);
         report.receipts.push(this.#receiptPayload(this.store.get(id), runId));
+      } else if (row.state === S.RECONCILED && want) {
+        const mismatch = !receipt ? 'reconciled leg has no receipt on ledger' : diffReceipt(receipt, want, this.currency);
+        if (mismatch) report.findings.push({ settlementId: id, kind: 'reconciled-receipt-mismatch', detail: mismatch });
       } else if (receipt && [S.PLANNED, S.APPROVED, S.SUBMITTING, S.UNKNOWN, S.FAILED].includes(row.state)) {
         report.findings.push({ settlementId: id, kind: 'receipt-ahead-of-state', detail: `receipt exists while leg is ${row.state}` });
       }
