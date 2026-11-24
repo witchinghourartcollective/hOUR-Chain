@@ -38,7 +38,7 @@ export class LeaseError extends Error {}
 
 const LEG_COLUMNS = [
   'settlement_id', 'instruction_event_id', 'leg_index', 'contract_alias', 'network', 'currency',
-  'contribution_ref', 'agreement_ref', 'payee', 'amount_minor', 'state', 'attempts',
+  'contribution_ref', 'agreement_ref', 'obligation_ref', 'approval_refs', 'payee', 'amount_minor', 'state', 'attempts',
   'tx_ref', 'network_round', 'last_error', 'lease_owner', 'lease_expires_at', 'created_at', 'updated_at',
 ];
 
@@ -57,6 +57,8 @@ export class LegStore {
         currency TEXT NOT NULL,
         contribution_ref TEXT NOT NULL,
         agreement_ref TEXT NOT NULL,
+        obligation_ref TEXT NOT NULL DEFAULT '',
+        approval_refs TEXT NOT NULL DEFAULT '[]',
         payee TEXT NOT NULL,
         amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
         state TEXT NOT NULL,
@@ -78,7 +80,18 @@ export class LegStore {
         detail TEXT,
         at INTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS obligation_assignments (
+        obligation_ref TEXT PRIMARY KEY,
+        instruction_event_id TEXT NOT NULL UNIQUE
+      );
     `);
+    const columns = new Set(this.db.prepare('PRAGMA table_info(legs)').all().map((column) => column.name));
+    if (!columns.has('obligation_ref')) {
+      this.db.exec("ALTER TABLE legs ADD COLUMN obligation_ref TEXT NOT NULL DEFAULT ''");
+    }
+    if (!columns.has('approval_refs')) {
+      this.db.exec("ALTER TABLE legs ADD COLUMN approval_refs TEXT NOT NULL DEFAULT '[]'");
+    }
   }
 
   close() {
@@ -92,12 +105,21 @@ export class LegStore {
     if (existing) return existing;
     const t = this.now();
     this.db.prepare(`INSERT INTO legs (settlement_id, instruction_event_id, leg_index, contract_alias, network,
-        currency, contribution_ref, agreement_ref, payee, amount_minor, state, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        currency, contribution_ref, agreement_ref, obligation_ref, approval_refs, payee, amount_minor, state, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
       leg.settlementId, leg.instructionEventId, leg.legIndex, leg.contractAlias, leg.network, leg.currency,
-      leg.contributionRef, leg.agreementRef, leg.payee, leg.amountMinor, S.PLANNED, t, t);
+      leg.contributionRef, leg.agreementRef, leg.obligationRef, JSON.stringify(leg.approvalRefs),
+      leg.payee, leg.amountMinor, S.PLANNED, t, t);
     this.#log(leg.settlementId, null, S.PLANNED, null, t);
     return this.get(leg.settlementId);
+  }
+
+  assignObligation(obligationRef, instructionEventId) {
+    this.db.prepare(`INSERT INTO obligation_assignments (obligation_ref, instruction_event_id)
+      VALUES (?, ?) ON CONFLICT(obligation_ref) DO NOTHING`).run(obligationRef, instructionEventId);
+    const assignment = this.db.prepare('SELECT instruction_event_id FROM obligation_assignments WHERE obligation_ref = ?')
+      .get(obligationRef);
+    return assignment.instruction_event_id === instructionEventId;
   }
 
   get(settlementId) {
@@ -165,5 +187,6 @@ function toLeg(row) {
   for (const column of LEG_COLUMNS) {
     leg[column.replace(/_([a-z])/g, (_, c) => c.toUpperCase())] = row[column];
   }
+  leg.approvalRefs = JSON.parse(leg.approvalRefs);
   return leg;
 }

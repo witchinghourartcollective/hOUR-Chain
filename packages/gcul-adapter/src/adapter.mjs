@@ -66,6 +66,8 @@ export class GculSettlementAdapter {
         currency: payload.currency,
         contributionRef: payload.contributionRef,
         agreementRef: payload.agreementRef,
+        obligationRef: payload.obligationRef,
+        approvalRefs: [...payload.approvals],
         payee: leg.payee,
         amountMinor: leg.amountMinor,
         alreadyOnLedger: receipt !== null,
@@ -77,6 +79,9 @@ export class GculSettlementAdapter {
   // ADR-0001 approve: record verified legs as APPROVED. Replaying an instruction is a no-op.
   async approve(instruction) {
     const plan = await this.simulate(instruction);
+    if (!this.store.assignObligation(instruction.payload.obligationRef, instruction.envelope.eventId)) {
+      throw new InstructionError(`obligation ${instruction.payload.obligationRef} is already assigned to another instruction`);
+    }
     return plan.legs.map((leg) => {
       const row = this.store.plan(leg);
       return row.state === S.PLANNED ? this.store.transition(leg.settlementId, S.APPROVED) : row;
@@ -100,6 +105,13 @@ export class GculSettlementAdapter {
         this.store.transition(settlementId, S.SUBMITTING, { lastError: 'pre-check found an existing receipt; not submitted' });
         this.store.transition(settlementId, S.REJECTED_DUPLICATE);
         return this.#confirmAgainstReceipt(settlementId, existing, null, null);
+      }
+
+      const approvalRefs = [leg.obligationRef, leg.contributionRef, leg.agreementRef, ...leg.approvalRefs];
+      const staleRef = approvalRefs.find((ref) => !this.isApproved(ref));
+      if (staleRef) {
+        this.store.transition(settlementId, S.CANCELLED, { lastError: `${staleRef} is no longer approved` });
+        throw new InstructionError(`${staleRef} is no longer approved; settlement leg cancelled`);
       }
 
       this.store.transition(settlementId, S.SUBMITTING); // written before the call: the write-ahead step
