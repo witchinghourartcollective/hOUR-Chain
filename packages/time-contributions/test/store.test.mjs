@@ -240,3 +240,18 @@ test('imports are all or nothing, and an anchored import succeeds', () => withDi
   restored.close();
   assert.throws(() => DurableRegistry.importJsonl(`${path}.u`, backup, { ...options, expectedHead: { seq: 6, hash: 'a'.repeat(64) } }), /expected head/);
 }));
+
+test('importing into an in-memory store keeps the data, with or without an anchor', () => withDir((path) => {
+  const source = new DurableRegistry(path, options);
+  const obligation = fullWorkflow(source);
+  const backup = source.exportJsonl();
+  const head = source.head();
+  source.close();
+  const plain = DurableRegistry.importJsonl(':memory:', backup, options);
+  assert.deepEqual(plain.head(), head);
+  assert.equal(plain.isApproved(obligation.envelope.eventId), true);
+  plain.close();
+  const anchored = DurableRegistry.importJsonl(':memory:', backup, { ...options, expectedHead: head });
+  assert.deepEqual(anchored.head(), head);
+  anchored.close();
+}));

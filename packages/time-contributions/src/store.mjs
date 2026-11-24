@@ -150,24 +150,26 @@ export class DurableRegistry {
       throw new StoreIntegrityError(`backup does not contain the expected head ${expectedHead.seq}:${expectedHead.hash}`);
     }
 
-    const db = new DatabaseSync(path);
+    // Write through the connection the returned store keeps, so ':memory:'
+    // imports are not lost to a closed connection.
+    const store = new DurableRegistry(path, registryOptions);
     try {
-      db.exec(SCHEMA_SQL);
-      db.exec('BEGIN IMMEDIATE');
+      store.#db.exec('BEGIN IMMEDIATE');
       try {
-        if (db.prepare('SELECT COUNT(*) AS n FROM events').get().n !== 0) throw new StoreIntegrityError('import target is not empty');
-        const insert = db.prepare(`INSERT INTO events (seq, event_id, event_type, body, prev_hash, entry_hash, appended_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`);
-        rows.forEach((r, i) => insert.run(i + 1, r.event.envelope.eventId, r.event.envelope.eventType, r.body, r.prev, r.hash, Date.now()));
-        db.exec('COMMIT');
+        if (store.#db.prepare('SELECT COUNT(*) AS n FROM events').get().n !== 0) throw new StoreIntegrityError('import target is not empty');
+        rows.forEach((r, i) => store.#insert(i + 1, r.event, r.body, r.prev, r.hash));
+        store.#db.exec('COMMIT');
       } catch (error) {
-        db.exec('ROLLBACK');
+        store.#db.exec('ROLLBACK');
         throw error;
       }
-    } finally {
-      db.close();
+      store.#anchor = expectedHead ?? null;
+      store.#reload(); // verifies the written log once more, including the anchor
+      return store;
+    } catch (error) {
+      store.close();
+      throw error;
     }
-    return new DurableRegistry(path, options); // reopens and verifies once more
   }
 
   #insert(seq, event, body, prev, hash) {
