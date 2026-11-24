@@ -82,10 +82,11 @@ test('hour-time runs the real-hours workflow end to end', async () => {
     const keys = Object.fromEntries(Object.entries(publicKeys).map(([who, k]) => [who, importPublicKey(k)]));
     const resolveKey = (s) => keys[String(s).split('#')[0]] ?? null;
     const registry = new DurableRegistry(store, { resolveKey, operators: ['hour-operator'] });
+    const resolveInstructionKey = (s) => (s === 'hour-operator#k1' ? keys['hour-operator'] : null);
     const ledger = new FakeLedger({ operator: 'op', balances: { op: 100_000 } });
     ledger.deploy('v2');
     const adapter = new GculSettlementAdapter({ store: new LegStore(), ledger, operator: 'op', contractAlias: 'v2', contractId: '1:CTR:t',
-      currency: 'DEM', resolveKey, isApproved: (ref) => registry.isApproved(ref), instructionSigners: ['hour-operator'],
+      currency: 'DEM', resolveKey: resolveInstructionKey, isApproved: (ref) => registry.isApproved(ref), instructionSigners: ['hour-operator'],
       expectedLegs: expectedLegs(registry, { payeeAccount: (id) => (id === 'producer' ? '1:USR:DEM:producer' : null) }) });
     const [leg] = await adapter.approve(instruction);
     assert.equal((await adapter.submit(leg.settlementId)).state, STATES.CONFIRMED);
