@@ -32,3 +32,22 @@ function split(ref) {
   const at = ref.lastIndexOf('@');
   return [ref.slice(0, at), Number(ref.slice(at + 1))];
 }
+
+// For GculSettlementAdapter({ expectedLegs }): derives the legs an instruction
+// must contain from the obligation it references, so the payee account and
+// amount come from the approved records and an operator-controlled account
+// mapping, never from the instruction itself.
+export function expectedLegs(registry, { payeeAccount }) {
+  return (payload) => {
+    const obligation = registry.obligation(payload.obligationRef);
+    if (!obligation) throw new RegistryError(`unknown obligation ${payload.obligationRef}`);
+    if (!obligation.valid) throw new RegistryError('obligation is stale');
+    const p = obligation.payload;
+    if (payload.contributionRef !== p.contributionRef || payload.agreementRef !== p.agreementRef || payload.currency !== p.currency) {
+      throw new RegistryError('instruction references do not match the obligation');
+    }
+    const account = payeeAccount(p.payee);
+    if (!account) throw new RegistryError(`no account for payee ${p.payee}`);
+    return [{ legIndex: 0, payee: account, amountMinor: p.amountMinor }];
+  };
+}

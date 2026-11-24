@@ -39,15 +39,21 @@ export class GculSettlementAdapter {
    * @param {string} options.currency        network currency code, e.g. DEM
    * @param {(signer: string) => object} options.resolveKey      public key for an instruction signer
    * @param {(eventId: string) => boolean} options.isApproved     true if an approval / versioned ref is approved
+   * @param {string[]} options.instructionSigners  identities allowed to sign settlement instructions (operators only)
+   * @param {(payload: object) => Array<{legIndex: number, payee: string, amountMinor: number}>} options.expectedLegs
+   *        the legs an instruction must contain, derived independently of the instruction (for example from the
+   *        obligation's payee and amount); an instruction whose legs differ in any way is refused
    * @param {string} [options.workerId]
    * @param {number} [options.leaseMs]
    */
-  constructor({ store, ledger, operator, contractAlias, contractId, currency, resolveKey, isApproved,
+  constructor({ store, ledger, operator, contractAlias, contractId, currency, resolveKey, isApproved, instructionSigners, expectedLegs,
     workerId = `worker-${process.pid}`, leaseMs = 120_000 }) {
-    for (const [name, value] of Object.entries({ store, ledger, operator, contractAlias, contractId, currency, resolveKey, isApproved })) {
+    for (const [name, value] of Object.entries({ store, ledger, operator, contractAlias, contractId, currency, resolveKey, isApproved, expectedLegs })) {
       if (!value) throw new TypeError(`${name} is required`);
     }
-    Object.assign(this, { store, ledger, operator, contractAlias, contractId, currency, resolveKey, isApproved, workerId, leaseMs });
+    if (!Array.isArray(instructionSigners) || instructionSigners.length === 0) throw new TypeError('instructionSigners is required');
+    Object.assign(this, { store, ledger, operator, contractAlias, contractId, currency, resolveKey, isApproved, expectedLegs, workerId, leaseMs });
+    this.instructionSigners = new Set(instructionSigners);
   }
 
   // ADR-0001 simulate: verify everything and derive legs; submits nothing.
@@ -243,8 +249,13 @@ export class GculSettlementAdapter {
     if (envelope.network !== 'gcul' || payload.network !== 'gcul') throw new InstructionError('instruction is not for network gcul');
     if (payload.currency !== this.currency) throw new InstructionError(`currency ${payload.currency} is not ${this.currency}`);
     if (envelope.payloadHash !== payloadHash(payload)) throw new InstructionError('payloadHash does not match payload');
-    const key = this.resolveKey(envelope.signature?.signer);
-    if (!key) throw new InstructionError(`no key for signer ${envelope.signature?.signer}`);
+    // Only operators may instruct payments; a collaborator's valid key is not enough.
+    const signer = envelope.signature?.signer;
+    const identity = String(signer ?? '').split('#')[0];
+    if (!this.instructionSigners.has(identity)) throw new InstructionError(`${identity || 'unknown signer'} may not sign settlement instructions`);
+    if (envelope.actor !== identity) throw new InstructionError(`actor ${envelope.actor} is not the signer ${identity}`);
+    const key = this.resolveKey(signer);
+    if (!key) throw new InstructionError(`no key for signer ${signer}`);
     const verdict = verifyEnvelope(envelope, key);
     if (!verdict.valid) throw new InstructionError(`signature invalid: ${verdict.reason ?? 'verification failed'}`);
     for (const ref of [payload.contributionRef, payload.agreementRef, payload.obligationRef, ...payload.approvals]) {
@@ -252,6 +263,14 @@ export class GculSettlementAdapter {
     }
     const indexes = payload.legs.map((l) => l.legIndex);
     if (new Set(indexes).size !== indexes.length) throw new InstructionError('duplicate legIndex');
+    // Bind destination and amount to what the obligation says, not to what the instruction claims.
+    let expected;
+    try { expected = this.expectedLegs(payload); } catch (error) { throw new InstructionError(`cannot derive expected legs: ${error.message}`); }
+    const norm = (legs) => JSON.stringify([...(legs ?? [])].map(({ legIndex, payee, amountMinor }) => ({ legIndex, payee, amountMinor }))
+      .sort((a, b) => a.legIndex - b.legIndex));
+    if (!expected || norm(expected) !== norm(payload.legs)) {
+      throw new InstructionError('instruction legs do not match the expected payee accounts and amounts');
+    }
   }
 
   #confirmAgainstReceipt(settlementId, receipt, txRef, round) {

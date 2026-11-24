@@ -46,6 +46,10 @@ const ledger = new UlCliLedger({ bin: UL_CLI, querySender: OPERATOR, payeeAliase
 const adapterFor = (storePath, workerId) => new GculSettlementAdapter({
   store: new LegStore(storePath), ledger, operator: OPERATOR, contractAlias: CONTRACT_ALIAS, contractId: CONTRACT_ID,
   currency: 'DEM', resolveKey: (s) => (s === SIGNER ? keys.publicKey : null), isApproved: (r) => SIMULATED_APPROVED.has(r), workerId,
+  instructionSigners: ['hour:pilot-operator'],
+  // Pilot only: the simulated obligation's legs are the ones this script defines. Real use derives them from the
+  // registry (time-contributions expectedLegs) so the instruction cannot choose its own payee or amount.
+  expectedLegs: (p) => (p.obligationRef === 'evt-pilot-20261124-obligation-0001' ? PILOT_LEGS : null),
 });
 const evidence = { mode: MODE, startedAt: new Date().toISOString(), simulatedRecords: [...SIMULATED_APPROVED], instruction,
   signerPublicKey: exportPublicKey(keys.publicKey), steps: [] };
@@ -106,6 +110,8 @@ function brief(leg) {
     attempts: leg.attempts, txRef: leg.txRef, networkRound: leg.networkRound, lastError: leg.lastError };
 }
 
+const PILOT_LEGS = [{ legIndex: 0, payee: PAYEE, amountMinor: 40 }, { legIndex: 1, payee: PAYEE, amountMinor: 60 }];
+
 function buildInstruction() {
   const payload = {
     network: 'gcul',
@@ -113,7 +119,7 @@ function buildInstruction() {
     contributionRef: 'contrib-pilot-0001@1',
     agreementRef: 'agree-pilot-0001@1',
     obligationRef: 'evt-pilot-20261124-obligation-0001',
-    legs: [{ legIndex: 0, payee: PAYEE, amountMinor: 40 }, { legIndex: 1, payee: PAYEE, amountMinor: 60 }],
+    legs: PILOT_LEGS,
     approvals: ['evt-pilot-20261124-approval-0001'],
   };
   const path = join(STATE_DIR, 'instruction.json');

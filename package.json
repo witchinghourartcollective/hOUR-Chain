@@ -9,7 +9,8 @@
   "scripts": {
     "test": "node --test",
     "check:conformance": "python3 specs/check-conformance.py",
-    "check": "npm test && npm run check:conformance"
+    "check": "npm test && npm run check:conformance",
+    "hour-time": "node packages/time-contributions/bin/hour-time.mjs"
   },
   "dependencies": {
     "ajv": "^8.20.0",

@@ -29,7 +29,38 @@ A rejected event changes nothing.
 
 ## Settlement
 
-`buildSettlementInstruction(registry, obligationEventId, { network, currency, payeeAccount })` returns a payload that matches `specs/payloads/settlement-instruction.schema.json`. The operator signs it as a `settlement.instruction` event. Pass `isApproved: (ref) => registry.isApproved(ref)` to `GculSettlementAdapter`, and the adapter will settle only obligations whose records are still approved.
+`buildSettlementInstruction(registry, obligationEventId, { network, currency, payeeAccount })` returns a payload that matches `specs/payloads/settlement-instruction.schema.json`. The operator signs it as a `settlement.instruction` event. Configure `GculSettlementAdapter` with:
+
+- `isApproved: (ref) => registry.isApproved(ref)`, so only obligations whose records are still approved are settled;
+- `instructionSigners: [operator identities]`, so collaborators cannot sign settlement instructions;
+- `expectedLegs: expectedLegs(registry, { payeeAccount })`, so the destination account and amount come from the obligation and your account mapping, never from the instruction.
+
+## Command line: `hour-time`
+
+Each person has a profile in `$HOUR_HOME` (default `~/.hour`) holding their ML-DSA-65 signing key (mode 600), the public keys they trust, and the store path. Run `npm run hour-time -- help` from the repository root for every command.
+
+```
+# once per person
+hour-time keygen --identity producer          # prints the public key to share
+hour-time trust --identity artist --public-key <their key>
+hour-time config --store /shared/registry.db --operators hour-operator
+
+# the workflow
+hour-time claim --contribution-id contrib-s1 --work work-07 --role producer --activity recording \
+  --duration 2h --start 2026-11-20T18:00:00Z --end 2026-11-20T20:00:00Z --reviewers artist,engineer
+hour-time review --contribution-id contrib-s1 --version 1 --approve          # run by each reviewer
+hour-time propose-agreement --agreement-id agree-s1 --work work-07 --contribution-id contrib-s1 \
+  --payee producer --parties producer,artist --currency DEM --terms-ref vault://t/1 --rate-per-hour 3000
+hour-time review-agreement --agreement-id agree-s1 --version 1 --approve    # run by each party
+hour-time obligation --obligation-id obl-1 --contribution-ref contrib-s1@1 --agreement-ref agree-s1@1   # operator; amount computed
+hour-time instruction --obligation <event id> --payee-account 1:USR:DEM:... --currency DEM --out instruction.json
+```
+
+A collaborator without access to the store adds `--out file.json` to any write command, which signs without appending, and sends the file to whoever holds the store, who runs `hour-time append file.json`. Corrections use `claim ... --amends`; offline, name the version being corrected with `--amends-event` and `--amends-version`. Disputes require `--reason`.
+
+- **Keys:** signers are `identity#keyId`. `keygen --rotate` creates the next key id and keeps the old public key trusted, so earlier events still verify. `trust --key-id` adds a collaborator's new key and never overwrites an existing key id.
+- **Anchors:** `hour-time head --record` saves the current `{ seq, hash }` as the profile's anchor, and `config --anchor SEQ:HASH` sets one recorded elsewhere. Every later open must contain it. Keep a copy somewhere the store's host cannot rewrite.
+- **Instructions:** `instruction` refuses unless your identity is one of the configured operators. The adapter enforces the same rule independently.
 
 ## Storage
 
@@ -46,4 +77,4 @@ Replay re-verifies every signature on open. That is fine at pilot scale; larger 
 
 ## Status
 
-Tested offline, including an end-to-end run of every TIME-CONTRIBUTIONS.md pilot criterion through `gcul-adapter` on a fake ledger, and durable storage with tamper, truncation and multi-process tests. Not built yet: an application UI and a pilot with real collaborators.
+Tested offline, including an end-to-end run of every TIME-CONTRIBUTIONS.md pilot criterion through `gcul-adapter` on a fake ledger, and durable storage with tamper, truncation and multi-process tests. A command-line client (`hour-time`) is included. Not built yet: an application UI and a pilot with real collaborators.

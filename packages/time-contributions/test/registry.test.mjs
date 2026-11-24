@@ -5,11 +5,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateTestKeyPair, signEnvelope } from '../../pqc-profile/src/index.mjs';
 import {
-  ContributionRegistry, RegistryError, STATUS, payloadHash, calculateObligation, CalculationError, buildSettlementInstruction,
+  ContributionRegistry, RegistryError, STATUS, payloadHash, calculateObligation, CalculationError, buildSettlementInstruction, expectedLegs,
 } from '../src/index.mjs';
 import { GculSettlementAdapter, LegStore, FakeLedger, deriveSettlementId, STATES } from '../../gcul-adapter/src/index.mjs';
 
 const PEOPLE = ['producer', 'artist', 'engineer', 'hour-operator', 'mallory'];
+const PAYEE_ACCOUNT = '1:USR:DEM:producer-account';
 const KEYS = Object.fromEntries(PEOPLE.map((p) => [p, generateTestKeyPair()]));
 const resolveKey = (signer) => KEYS[String(signer).split('#')[0]]?.publicKey ?? null;
 let seq = 0;
@@ -99,7 +100,8 @@ test('pilot criteria end to end: claim, approval, agreement, obligation, settlem
   ledger.deploy('hour_settlement_v2');
   const adapter = new GculSettlementAdapter({
     store: new LegStore(), ledger, operator: 'hour_chain_owner', contractAlias: 'hour_settlement_v2', contractId: '1:CTR:test',
-    currency: 'DEM', resolveKey, isApproved: (ref) => r.isApproved(ref),
+    currency: 'DEM', resolveKey, isApproved: (ref) => r.isApproved(ref), instructionSigners: ['hour-operator'],
+    expectedLegs: expectedLegs(r, { payeeAccount: (id) => (id === 'producer' ? PAYEE_ACCOUNT : null) }),
   });
   const [leg] = await adapter.approve(instruction);
   assert.equal((await adapter.submit(leg.settlementId)).state, STATES.CONFIRMED);
@@ -168,7 +170,8 @@ test('an amendment after adapter approval cancels the leg before any payment', a
   ledger.deploy('hour_settlement_v2');
   const adapter = new GculSettlementAdapter({
     store: new LegStore(), ledger, operator: 'hour_chain_owner', contractAlias: 'hour_settlement_v2', contractId: '1:CTR:test',
-    currency: 'DEM', resolveKey, isApproved: (ref) => r.isApproved(ref),
+    currency: 'DEM', resolveKey, isApproved: (ref) => r.isApproved(ref), instructionSigners: ['hour-operator'],
+    expectedLegs: expectedLegs(r, { payeeAccount: (id) => (id === 'producer' ? PAYEE_ACCOUNT : null) }),
   });
   const [leg] = await adapter.approve(instruction);
   r.append(ev('contribution.claimed', claim({ version: 2, amends: claimEvent.envelope.eventId, durationSeconds: 3600 }), 'producer'));
