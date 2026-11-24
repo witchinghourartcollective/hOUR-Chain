@@ -1,0 +1,423 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hourchain.example/schemas/payloads/time-contributions.schema.json",
+  "title": "hOUR Chain real-hours contribution payloads",
+  "description": "Content-addressed payloads for the real-hours workflow in docs/TIME-CONTRIBUTIONS.md. Each payload travels in a signed event envelope whose eventType names the $defs entry. Structure only: cross-record invariants (reviewer rights, versions, overlaps, deterministic obligation amounts) are enforced by packages/time-contributions.",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.:\\-]{3,128}$"
+    },
+    "identity": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.:\\-]{3,128}$"
+    },
+    "minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "dispute"
+      ]
+    },
+    "contribution.claimed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contributionId",
+        "version",
+        "workRef",
+        "contributor",
+        "role",
+        "activity",
+        "durationSeconds",
+        "evidenceRefs",
+        "reviewers"
+      ],
+      "properties": {
+        "contributionId": {
+          "$ref": "#/$defs/id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "amends": {
+          "type": "string",
+          "minLength": 16,
+          "description": "Event ID of the claim version this one corrects. Required when version > 1."
+        },
+        "workRef": {
+          "$ref": "#/$defs/id"
+        },
+        "contributor": {
+          "$ref": "#/$defs/identity"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "activity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "durationSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2592000,
+          "description": "Actual duration in integer seconds; at most 30 days per claim."
+        },
+        "startAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "endAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "References only; private session records and media stay under access control."
+        },
+        "reviewers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identity"
+          }
+        }
+      },
+      "dependentRequired": {
+        "startAt": [
+          "endAt"
+        ],
+        "endAt": [
+          "startAt"
+        ]
+      }
+    },
+    "contribution.reviewed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contributionId",
+        "version",
+        "decision"
+      ],
+      "properties": {
+        "contributionId": {
+          "$ref": "#/$defs/id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "decision": {
+          "$ref": "#/$defs/decision"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    },
+    "agreement.proposed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agreementId",
+        "version",
+        "workRef",
+        "contributionId",
+        "payee",
+        "parties",
+        "currency",
+        "basis"
+      ],
+      "properties": {
+        "agreementId": {
+          "$ref": "#/$defs/id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "amends": {
+          "type": "string",
+          "minLength": 16
+        },
+        "workRef": {
+          "$ref": "#/$defs/id"
+        },
+        "contributionId": {
+          "$ref": "#/$defs/id",
+          "description": "The contribution this agreement compensates."
+        },
+        "payee": {
+          "$ref": "#/$defs/identity"
+        },
+        "parties": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identity"
+          },
+          "description": "Everyone who must approve this version, including the payee."
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "fixed_fee",
+            "hourly_rate",
+            "revenue_share"
+          ]
+        },
+        "feeMinor": {
+          "$ref": "#/$defs/minor"
+        },
+        "rateMinorPerHour": {
+          "$ref": "#/$defs/minor"
+        },
+        "shareBps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "termsRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reference to the full agreement text, kept off-ledger under access control."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "basis": {
+                "const": "fixed_fee"
+              }
+            },
+            "required": [
+              "basis"
+            ]
+          },
+          "then": {
+            "required": [
+              "feeMinor"
+            ],
+            "properties": {
+              "rateMinorPerHour": false,
+              "shareBps": false,
+              "feeMinor": {}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "basis": {
+                "const": "hourly_rate"
+              }
+            },
+            "required": [
+              "basis"
+            ]
+          },
+          "then": {
+            "required": [
+              "rateMinorPerHour"
+            ],
+            "properties": {
+              "feeMinor": false,
+              "shareBps": false,
+              "rateMinorPerHour": {}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "basis": {
+                "const": "revenue_share"
+              }
+            },
+            "required": [
+              "basis"
+            ]
+          },
+          "then": {
+            "required": [
+              "shareBps"
+            ],
+            "properties": {
+              "feeMinor": false,
+              "rateMinorPerHour": false,
+              "shareBps": {}
+            }
+          }
+        }
+      ]
+    },
+    "agreement.reviewed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agreementId",
+        "version",
+        "decision"
+      ],
+      "properties": {
+        "agreementId": {
+          "$ref": "#/$defs/id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "decision": {
+          "$ref": "#/$defs/decision"
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    },
+    "revenue.reported": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revenueId",
+        "workRef",
+        "amountMinor",
+        "currency",
+        "periodStart",
+        "periodEnd"
+      ],
+      "properties": {
+        "revenueId": {
+          "$ref": "#/$defs/id"
+        },
+        "workRef": {
+          "$ref": "#/$defs/id"
+        },
+        "amountMinor": {
+          "$ref": "#/$defs/minor"
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "periodStart": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "periodEnd": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "statementRef": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "obligation.calculated": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "obligationId",
+        "contributionRef",
+        "agreementRef",
+        "payee",
+        "amountMinor",
+        "currency",
+        "calculation"
+      ],
+      "properties": {
+        "obligationId": {
+          "$ref": "#/$defs/id"
+        },
+        "contributionRef": {
+          "type": "string",
+          "pattern": "^[^@\\s]+@[1-9][0-9]*$"
+        },
+        "agreementRef": {
+          "type": "string",
+          "pattern": "^[^@\\s]+@[1-9][0-9]*$"
+        },
+        "revenueRef": {
+          "$ref": "#/$defs/id"
+        },
+        "payee": {
+          "$ref": "#/$defs/identity"
+        },
+        "amountMinor": {
+          "$ref": "#/$defs/minor"
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "calculation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "basis",
+            "formula",
+            "remainderNumerator",
+            "remainderDenominator"
+          ],
+          "properties": {
+            "basis": {
+              "type": "string",
+              "enum": [
+                "fixed_fee",
+                "hourly_rate",
+                "revenue_share"
+              ]
+            },
+            "formula": {
+              "type": "string",
+              "minLength": 1
+            },
+            "remainderNumerator": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "remainderDenominator": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "description": "Integer arithmetic only; amounts round down and the dropped fraction is recorded as remainderNumerator / remainderDenominator minor units."
+        }
+      }
+    }
+  }
+}
