@@ -255,3 +255,19 @@ test('importing into an in-memory store keeps the data, with or without an ancho
   assert.deepEqual(anchored.head(), head);
   anchored.close();
 }));
+
+test('a running instance re-verifies when rows before its head are edited or deleted', () => withDir((path) => {
+  const a = new DurableRegistry(path, options);
+  fullWorkflow(a);
+  const raw = new DatabaseSync(path);
+  const row = raw.prepare('SELECT body FROM events WHERE seq = 3').get();
+  raw.prepare('UPDATE events SET body = ? WHERE seq = 3').run(row.body.replace('"rateMinorPerHour":2500', '"rateMinorPerHour":9999'));
+  assert.throws(() => a.isApproved('contrib-s1@1'), /entry hash mismatch at seq 3/);
+  raw.prepare('UPDATE events SET body = ? WHERE seq = 3').run(row.body); // restore
+  assert.equal(a.isApproved('contrib-s1@1'), true);
+  raw.prepare('DELETE FROM events WHERE seq = 2').run();
+  raw.close();
+  assert.throws(() => a.append(ev('revenue.reported', { revenueId: 'rev-y', workRef: 'work-07', amountMinor: 10, currency: 'DEM',
+    periodStart: '2026-11-01T00:00:00Z', periodEnd: '2026-12-01T00:00:00Z' }, 'hour-operator')), /sequence gap: expected 2, found 3/);
+  a.close();
+}));
