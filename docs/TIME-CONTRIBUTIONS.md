@@ -1,6 +1,6 @@
 # Real-hours contribution model
 
-Status: product requirement and implementation direction, restored 2026-10-22. The workflow's records and rules are implemented in [`packages/time-contributions`](../packages/time-contributions/README.md) and tested offline, end to end through the GCUL settlement adapter, as of 2026-11-24. Durable storage, an application UI and a pilot with real collaborators are not yet built. This document does not alter the existing chain architecture, event envelope, or token model.
+Status: product requirement and implementation direction, restored 2026-10-22. The workflow's records and rules are implemented in [`packages/time-contributions`](../packages/time-contributions/README.md) and tested offline, end to end through the GCUL settlement adapter, as of 2026-11-24. Durable, tamper-evident storage is included. An application UI and a pilot with real collaborators are not yet built. This document does not alter the existing chain architecture, event envelope, or token model.
 
 ## Purpose
 

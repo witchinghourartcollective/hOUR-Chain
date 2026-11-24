@@ -31,6 +31,18 @@ A rejected event changes nothing.
 
 `buildSettlementInstruction(registry, obligationEventId, { network, currency, payeeAccount })` returns a payload that matches `specs/payloads/settlement-instruction.schema.json`. The operator signs it as a `settlement.instruction` event. Pass `isApproved: (ref) => registry.isApproved(ref)` to `GculSettlementAdapter`, and the adapter will settle only obligations whose records are still approved.
 
+## Storage
+
+`DurableRegistry(path, { resolveKey, operators, expectedHead? })` has the same query API as `ContributionRegistry`, and persists events in SQLite (`node:sqlite`):
+
+- **Atomic appends.** Each event is validated and written inside one `BEGIN IMMEDIATE` transaction, so a rejected event never reaches disk and two writers cannot interleave.
+- **Tamper evidence.** Every row carries `entry_hash = sha256(prev_hash + "\n" + canonical event)`. Every open checks contiguous sequence numbers and the unbroken chain, then replays the whole log, re-verifying every ML-DSA signature, payload hash and rule. Edits, insertions and deletions refuse to open, even if an attacker recomputes the chain.
+- **Truncation.** A chain cannot reveal that its newest rows were cut off. Record `head()` (`{ seq, hash }`) somewhere independent, for example by anchoring it on a ledger, and pass it back as `expectedHead`.
+- **Several processes.** Every query and append first picks up rows appended by other processes. A settlement adapter in one process therefore sees an amendment made in another, and cancels the stale leg instead of paying it.
+- **Backup.** `exportJsonl()` writes one canonical signed event per line. `DurableRegistry.importJsonl(path, text, options)` restores the backup into an empty store and re-verifies every event.
+
+Replay re-verifies every signature on open. That is fine at pilot scale; larger logs would need verified checkpoints.
+
 ## Status
 
-The package is tested offline, including an end-to-end test of every TIME-CONTRIBUTIONS.md pilot criterion through `gcul-adapter` on a fake ledger. Records are held in memory and replayed from the event log (`ContributionRegistry.fromLog`). Durable storage and an application UI are not built yet.
+Tested offline, including an end-to-end run of every TIME-CONTRIBUTIONS.md pilot criterion through `gcul-adapter` on a fake ledger, and durable storage with tamper, truncation and multi-process tests. Not built yet: an application UI and a pilot with real collaborators.
