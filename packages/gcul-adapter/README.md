@@ -24,6 +24,10 @@ It follows the real-hours model in [TIME-CONTRIBUTIONS.md](../../docs/TIME-CONTR
 
 Run the tests from the repository root with `npm test`.
 
+## Settling real instructions
+
+`scripts/settle.mjs` pays a settlement instruction made with `hour-time instruction`. It verifies the instruction against the operator's registry (`--operator-home`), maps payee identities to GCUL accounts (`--payees`), and is a dry run unless you pass `--live`. Each leg is paid at most once across runs, and every run writes evidence. For a step-by-step pilot, see [docs/REAL-HOURS-PILOT.md](../../docs/REAL-HOURS-PILOT.md).
+
 ## Known limits
 
 - When a receipt is found only in contract state, after an unknown outcome or a duplicate, GCUL provides no way to recover its transaction hash. `networkTxRef` is then `state:<contractId>/<settlementId>` (ADR-0009 open question 2).
