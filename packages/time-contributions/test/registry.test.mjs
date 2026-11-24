@@ -295,3 +295,49 @@ test('duplicate claims without times are refused; the log replays to identical s
     assert.equal(replayed.isApproved(ref), r.isApproved(ref), ref);
   }
 });
+
+const FLOW = {
+  tool: 'Google Flow', provider: 'Google', model: 'Lyria', outputs: ['audio', 'lyrics'],
+  use: 'Generated instrumental and lyric drafts from my prompts in the Flow iPhone app; I chose, arranged and edited the takes.',
+  evidenceRefs: ['vault://flow/project-song1'],
+};
+
+test('AI disclosure is part of the approved claim and summarised per work', () => {
+  const r = newRegistry();
+  const flowClaim = ev('contribution.claimed', claim({ aiAssistance: [FLOW] }), 'producer');
+  r.append(flowClaim);
+  r.append(ev('contribution.reviewed', { contributionId: 'contrib-session-0001', version: 1, decision: 'approve' }, 'artist'));
+  r.append(ev('contribution.reviewed', { contributionId: 'contrib-session-0001', version: 1, decision: 'approve' }, 'engineer'));
+  r.append(ev('contribution.claimed', claim({ contributionId: 'contrib-vocals', contributor: 'artist', role: 'vocalist', activity: 'vocals',
+    startAt: '2026-11-21T18:00:00Z', endAt: '2026-11-21T19:00:00Z', durationSeconds: 3600, reviewers: ['producer'], aiAssistance: [] }), 'artist'));
+  r.append(ev('contribution.claimed', claim({ contributionId: 'contrib-mix', contributor: 'engineer', role: 'engineer', activity: 'mixing',
+    startAt: '2026-11-22T18:00:00Z', endAt: '2026-11-22T19:00:00Z', durationSeconds: 3600, reviewers: ['producer'] }), 'engineer'));
+
+  const d = r.aiDisclosure('work-track-07');
+  assert.equal(d.contributions.length, 3);
+  assert.deepEqual(d.summary, {
+    aiUsed: true, tools: ['Google Flow'], outputs: ['audio', 'lyrics'],
+    undeclared: ['contrib-mix'], unapproved: ['contrib-vocals', 'contrib-mix'],
+  });
+  assert.deepEqual(d.contributions.find((c) => c.contributionId === 'contrib-vocals').aiAssistance, []); // declared: none
+  assert.equal(d.contributions.find((c) => c.contributionId === 'contrib-mix').aiAssistance, null); // not declared
+
+  // Changing the disclosure is an amendment: approval does not carry over.
+  r.append(ev('contribution.claimed', claim({ version: 2, amends: flowClaim.envelope.eventId,
+    aiAssistance: [{ ...FLOW, outputs: ['audio', 'lyrics', 'vocals'] }] }), 'producer'));
+  assert.equal(r.contribution('contrib-session-0001').status, STATUS.PENDING);
+  assert.ok(r.aiDisclosure('work-track-07').summary.unapproved.includes('contrib-session-0001'));
+});
+
+test('AI disclosure entries must say what the tool did and what it produced', () => {
+  const r = newRegistry();
+  const bad = (entry, name) => assert.throws(() => r.append(ev('contribution.claimed', claim({ aiAssistance: [entry] }), 'producer')),
+    /invalid contribution.claimed/, name);
+  bad({ ...FLOW, tool: ' ' }, 'blank tool');
+  bad({ ...FLOW, use: '' }, 'empty use');
+  bad((({ use, ...rest }) => rest)(FLOW), 'missing use');
+  bad({ ...FLOW, outputs: [] }, 'no outputs');
+  bad({ ...FLOW, outputs: ['song'] }, 'unknown output kind');
+  bad({ ...FLOW, author: 'Google Flow' }, 'extra fields');
+  assert.equal(r.log.length, 0);
+});

@@ -27,6 +27,10 @@ Use exact duration units such as integer seconds or minutes in a future schema d
 - Corrections and disputes must preserve history rather than silently overwrite approved records.
 - This model does not specify one token per hour, a fixed cash value, redemption, or automatic token minting. Token economics remain a separate design decision.
 
+## AI assistance
+
+Contributors may use AI tools, for example generating music in Google Flow, which uses Lyria. A contribution should disclose that use: the tool, what it produced (audio, lyrics, vocals and so on), and what the person did themselves. Reviewers approve the disclosure along with the time. AI tools are recorded as disclosures, never as contributors: they do not approve records, hold rights, or receive payment, and the time claimed is the person's own working time, including directing, selecting and editing AI output. An undeclared contribution is distinct from one that declares no AI use. This supports platform AI-disclosure requirements and identifying AI-generated material when registering copyright; it does not decide authorship or ownership, which remain matters of agreement and law.
+
 ## Repository and adapter requirements
 
 Every HBC repository should expose this concept in its README and keep its implementation status explicit. This applies to protocol, application, storage, consent, and settlement components without changing their established architecture or deployment status.

@@ -27,6 +27,24 @@ A rejected event changes nothing.
 - **History:** a correction is a new version that references the previous one. Earlier versions, and their reviews and disputes, stay in the log as `SUPERSEDED`. Approvals never carry over to a new version.
 - **Obligations:** an obligation requires the current approved version of both the contribution and the agreement, and that agreement must cover that contribution. The amount must equal the deterministic, integer-only calculation, which rounds down and records the remainder. Only one obligation is allowed per contribution version, agreement version and revenue report. Amending either record makes existing obligations stale, and a stale obligation cannot be settled.
 
+## AI disclosure
+
+A claim can carry `aiAssistance`, a list of entries with `tool`, `provider`, `model`, `use`, `outputs` and `evidenceRefs`. It discloses AI tools used in the contribution, for example a track made with Google Flow, which uses Lyria. Reviewers approve the disclosure together with the hours, because it is part of the signed claim version. Changing it is an amendment and needs a fresh review.
+
+- **Absent means not declared. `[]` means declared: no AI used.** A disclosure report never treats silence as "no AI".
+- **AI tools are disclosed, never contributors.** They cannot sign, approve, hold rights or be paid. People claim their own time, including time spent directing, selecting and editing AI output.
+- `registry.aiDisclosure(workRef)` (and `hour-time disclosure --work ID`) lists every contributor's current disclosure for a song and summarises it: whether AI was used, which tools, which kinds of output, and which contributions are undeclared or not yet approved. It is ready for distributor AI-disclosure forms or for identifying AI-generated material in a copyright registration.
+
+```
+hour-time claim --contribution-id contrib-song1-prod --work work-song1 --role producer \
+  --activity ai-assisted-production --duration 2h --reviewers artist \
+  --ai-tool "Google Flow" --ai-provider Google --ai-model Lyria --ai-output audio,lyrics \
+  --ai-use "Generated the beat and lyric drafts from my prompts; I picked, arranged and edited them" \
+  --ai-evidence vault://flow/song1-session
+hour-time claim ... --no-ai          # declare that no AI was used
+hour-time disclosure --work work-song1
+```
+
 ## Settlement
 
 `buildSettlementInstruction(registry, obligationEventId, { network, currency, payeeAccount })` returns a payload that matches `specs/payloads/settlement-instruction.schema.json`. The operator signs it as a `settlement.instruction` event. Configure `GculSettlementAdapter` with:

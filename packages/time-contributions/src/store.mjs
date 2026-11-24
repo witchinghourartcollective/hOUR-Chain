@@ -116,6 +116,7 @@ export class DurableRegistry {
   revenue(id) { this.#sync(); return this.#registry.revenue(id); }
   obligation(eventId) { this.#sync(); return this.#registry.obligation(eventId); }
   approvalEventIds(id, version, kind) { this.#sync(); return this.#registry.approvalEventIds(id, version, kind); }
+  aiDisclosure(workRef) { this.#sync(); return this.#registry.aiDisclosure(workRef); }
   get log() { this.#sync(); return this.#registry.log; }
 
   // One canonical signed event per line, in order: a portable backup.

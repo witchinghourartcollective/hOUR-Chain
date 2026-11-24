@@ -34,6 +34,9 @@ Records (signed with your key; --out FILE signs without appending)
   claim --contribution-id ID --work ID --role R --activity A --duration 2h30m
         [--start ISO --end ISO --timezone TZ] [--evidence ref,ref] --reviewers ID,ID
         [--amends [--amends-event EVENT_ID --amends-version N]]   (explicit target works offline with --out)
+        AI disclosure (approved by reviewers with the claim):
+        [--ai-tool "Google Flow" --ai-use TEXT --ai-output audio,lyrics [--ai-provider Google] [--ai-model Lyria]
+         [--ai-evidence ref,ref]]  |  [--ai-json FILE]  |  [--no-ai]      (omitting all = not declared)
   review --contribution-id ID --version N (--approve | --dispute --reason TEXT)
   propose-agreement --agreement-id ID --work ID --contribution-id ID --payee ID --parties ID,ID
         --currency CUR --terms-ref REF (--fee N | --rate-per-hour N | --share-bps N) [--amends]
@@ -45,6 +48,7 @@ Records (signed with your key; --out FILE signs without appending)
 Settlement and audit
   instruction --obligation EVENT_ID --payee-account ACCOUNT [--network gcul] [--currency CUR] --out FILE   (operators only)
   status [--contribution-id ID | --agreement-id ID]
+  disclosure --work ID                   AI disclosure for a work across all contributors
   head [--record]                        current {seq, hash}; --record saves it as this profile's anchor
                                          (also keep a copy somewhere the store's host cannot rewrite)
 `;
@@ -141,6 +145,32 @@ function decision(v) {
   return v.approve ? { decision: 'approve' } : { decision: 'dispute', reason: v.reason ?? '' };
 }
 
+// AI disclosure from flags. undefined = not declared; [] = declared no AI use.
+// One tool via --ai-tool/--ai-use/--ai-output (plus optional provider, model,
+// evidence); more via --ai-json FILE holding an array of entries.
+function aiAssistance(v) {
+  const flagged = ['ai-tool', 'ai-provider', 'ai-model', 'ai-use', 'ai-output', 'ai-evidence'].some((k) => v[k] !== undefined);
+  if (v['no-ai']) {
+    if (flagged || v['ai-json']) fail('--no-ai cannot be combined with AI details');
+    return [];
+  }
+  const entries = [];
+  if (v['ai-json']) {
+    const parsed = JSON.parse(readFileSync(v['ai-json'], 'utf8'));
+    if (!Array.isArray(parsed)) fail('--ai-json must contain a JSON array of entries');
+    entries.push(...parsed);
+  }
+  if (flagged) {
+    need(v, 'ai-tool', 'ai-use', 'ai-output');
+    const entry = { tool: v['ai-tool'], use: v['ai-use'], outputs: list(v['ai-output']) };
+    if (v['ai-provider']) entry.provider = v['ai-provider'];
+    if (v['ai-model']) entry.model = v['ai-model'];
+    if (v['ai-evidence']) entry.evidenceRefs = list(v['ai-evidence']);
+    entries.push(entry);
+  }
+  return entries.length ? entries : undefined;
+}
+
 // The version being amended: given explicitly (works offline, with --out), or
 // looked up in the store.
 function amendTarget(v, kind, id) {
@@ -172,6 +202,8 @@ const OPTIONS = {
   'payee-account': { type: 'string' }, network: { type: 'string' }, out: { type: 'string' },
   rotate: { type: 'boolean' }, 'key-id': { type: 'string' }, anchor: { type: 'string' }, record: { type: 'boolean' },
   'amends-event': { type: 'string' }, 'amends-version': { type: 'string' },
+  'ai-tool': { type: 'string' }, 'ai-provider': { type: 'string' }, 'ai-model': { type: 'string' }, 'ai-use': { type: 'string' },
+  'ai-output': { type: 'string' }, 'ai-evidence': { type: 'string' }, 'ai-json': { type: 'string' }, 'no-ai': { type: 'boolean' },
 };
 
 const need = (v, ...names) => { for (const n of names) if (v[n] === undefined || v[n] === '') fail(`--${n} is required`); };
@@ -244,6 +276,8 @@ const COMMANDS = {
     };
     if (v.start || v.end) { need(v, 'start', 'end'); payload.startAt = v.start; payload.endAt = v.end; }
     if (v.timezone) payload.timezone = v.timezone;
+    const ai = aiAssistance(v);
+    if (ai !== undefined) payload.aiAssistance = ai;
     if (v.amends) {
       const current = amendTarget(v, 'contribution', payload.contributionId);
       payload.version = current.version + 1;
@@ -347,6 +381,7 @@ const COMMANDS = {
           const r = kind === 'agreement' ? store.agreement(id, n) : store.contribution(id, n);
           if (!r) break;
           versions.push({ version: r.version, status: r.status, eventId: r.eventId,
+            ...(kind === 'contribution' ? { aiAssistance: r.payload.aiAssistance ?? 'not declared' } : {}),
             reviews: Object.fromEntries([...r.reviews].map(([who, x]) => [who, x.reason ? `${x.decision}: ${x.reason}` : x.decision])) });
         }
         return versions;
@@ -356,6 +391,22 @@ const COMMANDS = {
       const counts = {};
       for (const e of store.log) counts[e.envelope.eventType] = (counts[e.envelope.eventType] ?? 0) + 1;
       console.log(JSON.stringify({ store: profile().store, head: store.head(), events: counts }, null, 2));
+    } finally {
+      store.close();
+    }
+  },
+
+  disclosure(v) {
+    need(v, 'work');
+    const store = openStore();
+    try {
+      const d = store.aiDisclosure(v.work);
+      if (!d.contributions.length) fail(`no contributions for work ${v.work}`);
+      const s = d.summary;
+      console.log(s.aiUsed ? `AI used: yes (${s.tools.join(', ')}; outputs: ${s.outputs.join(', ')})` : 'AI used: none declared');
+      if (s.undeclared.length) console.log(`not declared: ${s.undeclared.join(', ')}`);
+      if (s.unapproved.length) console.log(`not yet approved by reviewers: ${s.unapproved.join(', ')}`);
+      console.log(JSON.stringify(d, null, 2));
     } finally {
       store.close();
     }

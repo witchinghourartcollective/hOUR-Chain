@@ -171,3 +171,48 @@ test('hour-time: operator-only instructions, offline amendments, key rotation, r
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('hour-time: AI disclosure for a song made in Google Flow', () => {
+  const root = mkdtempSync(join(tmpdir(), 'hour-time-ai-'));
+  try {
+    const store = join(root, 'shared', 'registry.db');
+    const people = ['producer', 'artist'];
+    const run = (who, ...args) => {
+      const r = spawnSync(process.execPath, [BIN, ...args], { env: { ...process.env, HOUR_HOME: join(root, who) }, encoding: 'utf8' });
+      return { code: r.status, out: r.stdout, err: r.stderr };
+    };
+    const ok = (who, ...args) => { const r = run(who, ...args); assert.equal(r.code, 0, `${who} ${args.join(' ')}\n${r.err}`); return r.out; };
+    const pub = {};
+    for (const who of people) pub[who] = ok(who, 'keygen', '--identity', who).trim().split('\n').pop();
+    for (const who of people) {
+      for (const other of people) if (other !== who) ok(who, 'trust', '--identity', other, '--public-key', pub[other]);
+      ok(who, 'config', '--store', store, '--operators', 'producer');
+    }
+    const base = ['--work', 'work-song1', '--duration', '2h'];
+    assert.match(run('producer', 'claim', '--contribution-id', 'contrib-x', ...base, '--role', 'producer', '--activity', 'production',
+      '--reviewers', 'artist', '--ai-tool', 'Google Flow').err, /--ai-use is required/);
+    assert.match(run('producer', 'claim', '--contribution-id', 'contrib-x', ...base, '--role', 'producer', '--activity', 'production',
+      '--reviewers', 'artist', '--no-ai', '--ai-tool', 'Google Flow').err, /cannot be combined/);
+
+    ok('producer', 'claim', '--contribution-id', 'contrib-song1-prod', ...base, '--role', 'producer', '--activity', 'ai-assisted-production',
+      '--start', '2026-11-24T19:00:00Z', '--end', '2026-11-24T21:00:00Z', '--reviewers', 'artist',
+      '--ai-tool', 'Google Flow', '--ai-provider', 'Google', '--ai-model', 'Lyria', '--ai-output', 'audio,lyrics',
+      '--ai-use', 'Generated the beat and lyric drafts from my prompts in the Flow iPhone app; I picked, arranged and edited them.',
+      '--ai-evidence', 'vault://flow/song1-session');
+    ok('artist', 'review', '--contribution-id', 'contrib-song1-prod', '--version', '1', '--approve');
+    ok('artist', 'claim', '--contribution-id', 'contrib-song1-vocals', ...base, '--role', 'vocalist', '--activity', 'vocals',
+      '--start', '2026-11-24T21:00:00Z', '--end', '2026-11-24T23:00:00Z', '--reviewers', 'producer', '--no-ai');
+
+    const out = ok('producer', 'disclosure', '--work', 'work-song1');
+    assert.match(out, /^AI used: yes \(Google Flow; outputs: audio, lyrics\)/);
+    assert.match(out, /not yet approved by reviewers: contrib-song1-vocals/);
+    const json = JSON.parse(out.slice(out.indexOf('{')));
+    const prod = json.contributions.find((c) => c.contributionId === 'contrib-song1-prod');
+    assert.equal(prod.aiAssistance[0].model, 'Lyria');
+    assert.equal(prod.status, 'APPROVED');
+    assert.deepEqual(json.contributions.find((c) => c.contributionId === 'contrib-song1-vocals').aiAssistance, []);
+    assert.match(ok('producer', 'status', '--contribution-id', 'contrib-song1-prod'), /"tool": "Google Flow"/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
