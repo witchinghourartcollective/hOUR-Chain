@@ -55,6 +55,7 @@ export class DurableRegistry {
   #seq = 0;
   #head = GENESIS;
   #verified = false; // true once this instance has verified a state it must never move back from
+  #dataVersion = null; // SQLite data_version at the last verification
 
   /**
    * @param {string} path  SQLite file path (':memory:' for tests)
@@ -177,12 +178,16 @@ export class DurableRegistry {
       VALUES (?, ?, ?, ?, ?, ?, ?)`).run(seq, event.envelope.eventId, event.envelope.eventType, body, prev, hash, Date.now());
   }
 
-  // Reloads when the log's length changed, or when the entry we last verified
-  // is no longer what we verified (a same-length rewrite).
+  // Reloads (re-verifying the whole log) whenever any other connection has
+  // committed to the database since our last verification. SQLite's
+  // data_version changes on every commit by another connection, so edits or
+  // deletions anywhere in the log, not only at the head, are caught. The
+  // length and head-hash checks are a second line of defence.
   #sync() {
+    const { data_version: version } = this.#db.prepare('PRAGMA data_version').get();
     const { n } = this.#db.prepare('SELECT COALESCE(MAX(seq), 0) AS n FROM events').get();
     const at = this.#seq === 0 ? null : this.#db.prepare('SELECT entry_hash FROM events WHERE seq = ?').get(this.#seq);
-    if (n !== this.#seq || (this.#seq > 0 && at?.entry_hash !== this.#head)) this.#reload();
+    if (version !== this.#dataVersion || n !== this.#seq || (this.#seq > 0 && at?.entry_hash !== this.#head)) this.#reload();
   }
 
   #reload() {
@@ -219,6 +224,7 @@ export class DurableRegistry {
     this.#seq = rows.length;
     this.#head = prev;
     this.#verified = true;
+    this.#dataVersion = this.#db.prepare('PRAGMA data_version').get().data_version;
   }
 }
 
