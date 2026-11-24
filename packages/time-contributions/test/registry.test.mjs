@@ -316,7 +316,7 @@ test('AI disclosure is part of the approved claim and summarised per work', () =
   const d = r.aiDisclosure('work-track-07');
   assert.equal(d.contributions.length, 3);
   assert.deepEqual(d.summary, {
-    aiUsed: true, tools: ['Google Flow'], outputs: ['audio', 'lyrics'],
+    aiUsed: 'yes', tools: ['Google Flow'], outputs: ['audio', 'lyrics'],
     undeclared: ['contrib-mix'], unapproved: ['contrib-vocals', 'contrib-mix'],
   });
   assert.deepEqual(d.contributions.find((c) => c.contributionId === 'contrib-vocals').aiAssistance, []); // declared: none
@@ -340,4 +340,16 @@ test('AI disclosure entries must say what the tool did and what it produced', ()
   bad({ ...FLOW, outputs: ['song'] }, 'unknown output kind');
   bad({ ...FLOW, author: 'Google Flow' }, 'extra fields');
   assert.equal(r.log.length, 0);
+});
+
+test('AI disclosure never reports silence as "no AI"', () => {
+  const r = newRegistry();
+  const at = (h) => ({ startAt: `2026-11-2${h}T10:00:00Z`, endAt: `2026-11-2${h}T11:00:00Z`, durationSeconds: 3600 });
+  r.append(ev('contribution.claimed', claim({ contributionId: 'contrib-a', workRef: 'work-quiet', ...at(1), aiAssistance: [] }), 'producer'));
+  r.append(ev('contribution.claimed', claim({ contributionId: 'contrib-b', workRef: 'work-quiet', ...at(2) }), 'producer'));
+  assert.equal(r.aiDisclosure('work-quiet').summary.aiUsed, 'unknown');
+  r.append(ev('contribution.claimed', claim({ contributionId: 'contrib-c', workRef: 'work-none', ...at(3), aiAssistance: [] }), 'producer'));
+  assert.equal(r.aiDisclosure('work-none').summary.aiUsed, 'no');
+  r.append(ev('contribution.claimed', claim({ contributionId: 'contrib-d', workRef: 'work-silent', ...at(4) }), 'producer'));
+  assert.equal(r.aiDisclosure('work-silent').summary.aiUsed, 'unknown');
 });

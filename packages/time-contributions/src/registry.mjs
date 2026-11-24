@@ -168,7 +168,10 @@ export class ContributionRegistry {
       workRef,
       contributions,
       summary: {
-        aiUsed: declared.some((c) => c.aiAssistance.length > 0),
+        // 'yes' if anyone declares AI use; 'no' only if every contribution explicitly
+        // declares none; otherwise 'unknown'. Silence is never reported as 'no'.
+        aiUsed: declared.some((c) => c.aiAssistance.length > 0) ? 'yes'
+          : declared.length === contributions.length ? 'no' : 'unknown',
         tools: [...new Set(declared.flatMap((c) => c.aiAssistance.map((a) => a.tool)))].sort(),
         outputs: [...new Set(declared.flatMap((c) => c.aiAssistance.flatMap((a) => a.outputs)))].sort(),
         undeclared: contributions.filter((c) => c.aiAssistance === null).map((c) => c.contributionId),

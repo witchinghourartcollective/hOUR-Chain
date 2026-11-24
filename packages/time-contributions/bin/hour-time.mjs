@@ -403,7 +403,11 @@ const COMMANDS = {
       const d = store.aiDisclosure(v.work);
       if (!d.contributions.length) fail(`no contributions for work ${v.work}`);
       const s = d.summary;
-      console.log(s.aiUsed ? `AI used: yes (${s.tools.join(', ')}; outputs: ${s.outputs.join(', ')})` : 'AI used: none declared');
+      console.log({
+        yes: `AI used: yes (${s.tools.join(', ')}; outputs: ${s.outputs.join(', ')})`,
+        no: 'AI used: no (every contribution declares no AI use)',
+        unknown: 'AI used: unknown (no AI declared, but some contributions have not declared either way)',
+      }[s.aiUsed]);
       if (s.undeclared.length) console.log(`not declared: ${s.undeclared.join(', ')}`);
       if (s.unapproved.length) console.log(`not yet approved by reviewers: ${s.unapproved.join(', ')}`);
       console.log(JSON.stringify(d, null, 2));

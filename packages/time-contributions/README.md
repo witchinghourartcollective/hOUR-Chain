@@ -33,7 +33,7 @@ A claim can carry `aiAssistance`, a list of entries with `tool`, `provider`, `mo
 
 - **Absent means not declared. `[]` means declared: no AI used.** A disclosure report never treats silence as "no AI".
 - **AI tools are disclosed, never contributors.** They cannot sign, approve, hold rights or be paid. People claim their own time, including time spent directing, selecting and editing AI output.
-- `registry.aiDisclosure(workRef)` (and `hour-time disclosure --work ID`) lists every contributor's current disclosure for a song and summarises it: whether AI was used, which tools, which kinds of output, and which contributions are undeclared or not yet approved. It is ready for distributor AI-disclosure forms or for identifying AI-generated material in a copyright registration.
+- `registry.aiDisclosure(workRef)` (and `hour-time disclosure --work ID`) lists every contributor's current disclosure for a song and summarises it: whether AI was used (`yes`, `no` only when every contribution explicitly declares none, otherwise `unknown`), which tools, which kinds of output, and which contributions are undeclared or not yet approved. It is ready for distributor AI-disclosure forms or for identifying AI-generated material in a copyright registration.
 
 ```
 hour-time claim --contribution-id contrib-song1-prod --work work-song1 --role producer \
